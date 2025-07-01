@@ -140,6 +140,7 @@
       <label class="tag"><input type="checkbox" name="languages" value="sk"><span>Slovenština</span></label>
       <label class="tag"><input type="checkbox" name="languages" value="pl"><span>Polština</span></label>
       <label class="tag"><input type="checkbox" name="languages" value="hu"><span>Maďarština</span></label>
+      <label class="tag"><input type="checkbox" name="languages" value="cs"><span>Čeština</span></label>
     </div>
 
     <label for="prompt">AI Prompt:</label>
@@ -156,16 +157,23 @@
   </form>
 
 
-  {% if links %}
+  {% if completed_jobs %}
   <div class="results">
-    <h2>✅ Překlad dokončen</h2>
-    {% if expires_at %}
-    <p>Soubor bude dostupný do: {{ expires_at | datetimeformat }}</p>
-    {% endif %}
+    <h2>✅ Dostupné překlady</h2>
     <ul>
-      {% for lang_code, file_url, fname in links %}
-        <li><strong>{{ lang_names.get(lang_code, lang_code) }} ({{ fname }}):</strong>
-          <a class="download-link" href="{{ file_url }}">Stáhnout</a>
+      {% for j in completed_jobs %}
+        <li>
+          {{ j.timestamp | datetimeformat }}
+          <form method="post" action="/remove/{{ j.id }}" style="display:inline;">
+            <button type="submit">❌</button>
+          </form>
+          <ul>
+            {% for lang_code, file_url, fname in j.links %}
+              <li><strong>{{ lang_names.get(lang_code, lang_code) }} ({{ fname }}):</strong>
+                <a class="download-link" href="{{ file_url }}">Stáhnout</a>
+              </li>
+            {% endfor %}
+          </ul>
         </li>
       {% endfor %}
     </ul>
@@ -185,8 +193,8 @@
           .then(r => r.json())
           .then(data => {
             fill.style.width = data.progress + '%';
-            if (data.progress >= 100 && data.links) {
-              window.location.href = '/?job=' + jobId;
+            if (data.progress >= 100) {
+              window.location.href = '/';
             } else {
               setTimeout(poll, 2000);
             }

@@ -206,6 +206,16 @@ def login():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    completed_jobs = [
+        {
+            "id": jid,
+            "links": info.get("links", []),
+            "timestamp": info.get("timestamp", 0),
+        }
+        for jid, info in JOB_PROGRESS.items()
+        if info.get("progress") == 100
+    ]
+    completed_jobs.sort(key=lambda j: j["timestamp"], reverse=True)
     if request.method == 'POST':
         uploaded_files = request.files.getlist('idml_files')
         selected_languages = request.form.getlist('languages')
@@ -236,22 +246,32 @@ def index():
         )
         thread.start()
 
-        return render_template('index.html', job_id=job_id, prompt_text=system_prompt or DEFAULT_PROMPT)
+        return render_template(
+            'index.html',
+            job_id=job_id,
+            prompt_text=system_prompt or DEFAULT_PROMPT,
+            completed_jobs=completed_jobs,
+            lang_names=LANGUAGE_NAMES,
+        )
 
     job_id = request.args.get('job')
     if job_id:
         info = JOB_PROGRESS.get(job_id)
-        if info and info.get('progress') == 100:
+        if info and info.get('progress') < 100:
             return render_template(
                 'index.html',
-                links=info.get('links'),
-                lang_names=LANGUAGE_NAMES,
-                expires_at=info.get('expires_at'),
+                job_id=job_id,
                 prompt_text=info.get('prompt', DEFAULT_PROMPT),
+                completed_jobs=completed_jobs,
+                lang_names=LANGUAGE_NAMES,
             )
-        return render_template('index.html', job_id=job_id, prompt_text=DEFAULT_PROMPT)
 
-    return render_template('index.html', prompt_text=DEFAULT_PROMPT)
+    return render_template(
+        'index.html',
+        prompt_text=DEFAULT_PROMPT,
+        completed_jobs=completed_jobs,
+        lang_names=LANGUAGE_NAMES,
+    )
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -264,6 +284,17 @@ def progress(job_id: str):
     if not info:
         return jsonify({'progress': 100, 'links': []})
     return jsonify({'progress': info.get('progress', 0), 'links': info.get('links'), 'expires_at': info.get('expires_at')})
+
+
+@app.route('/remove/<job_id>', methods=['POST'])
+def remove_job(job_id: str):
+    info = JOB_PROGRESS.pop(job_id, None)
+    if info and info.get('links'):
+        for _, _, fname in info['links']:
+            path = os.path.join(app.config['RESULT_FOLDER'], fname)
+            with contextlib.suppress(FileNotFoundError):
+                os.remove(path)
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
