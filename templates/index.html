@@ -55,15 +55,13 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    .spinner {
-      text-align: center;
+    .progress-wrapper {
       margin-top: 30px;
+      text-align: center;
     }
-    .spinner:after {
-      content: "⏳ Překlad probíhá, vyčkejte...";
-      display: block;
-      margin-top: 10px;
-      font-style: italic;
+    progress {
+      width: 100%;
+      height: 20px;
     }
     .footer {
       text-align: center;
@@ -95,8 +93,8 @@
     }
   </style>
   <script>
-    function showSpinner() {
-      document.getElementById('spinner').style.display = 'block';
+    function showProgress() {
+      document.getElementById('progressWrapper').style.display = 'block';
     }
   </script>
 </head>
@@ -110,7 +108,7 @@
   <div class="error">{{ error }}</div>
   {% endif %}
 
-  <form method="POST" enctype="multipart/form-data" onsubmit="showSpinner()">
+  <form method="POST" enctype="multipart/form-data" onsubmit="showProgress()">
     <label for="idml_file">Vyber IDML soubor:</label>
     <input type="file" name="idml_file" accept=".idml" required>
 
@@ -133,10 +131,16 @@
       <label><input type="checkbox" name="languages" value="hu"> Maďarština</label>
     </div>
 
+    <label for="prompt">AI Prompt:</label>
+    <textarea name="prompt" rows="4">{{ prompt_text }}</textarea>
+
     <button type="submit">Nahrát a přeložit</button>
   </form>
 
-  <div id="spinner" class="spinner" style="display: none;"></div>
+  <div id="progressWrapper" class="progress-wrapper" style="display: none;">
+    <progress></progress>
+    <p>⏳ Překlad probíhá, vyčkejte...</p>
+  </div>
 
   {% if links %}
   <div class="results">
