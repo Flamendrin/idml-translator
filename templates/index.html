@@ -87,6 +87,38 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+    .results ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .results .job {
+      border-bottom: 1px solid #eee;
+      padding: 10px 0;
+    }
+    .results .job:last-child {
+      border-bottom: none;
+    }
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .job-files {
+      margin-top: 5px;
+      padding-left: 20px;
+    }
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #dc3545;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .remove-btn:hover {
+      color: #a71d2a;
+    }
     .footer {
       text-align: center;
       margin-top: 50px;
@@ -162,19 +194,22 @@
     <h2>✅ Dostupné překlady</h2>
     <ul>
       {% for j in completed_jobs %}
-        <li>
-          {{ j.timestamp | datetimeformat }}
-          <form method="post" action="/remove/{{ j.id }}" style="display:inline;">
-            <button type="submit">❌</button>
+      <li class="job">
+        <div class="job-header">
+          <span>{{ j.timestamp | datetimeformat }}</span>
+          <form method="post" action="/remove/{{ j.id }}">
+            <button class="remove-btn" type="submit" title="Smazat">❌</button>
           </form>
-          <ul>
-            {% for lang_code, file_url, fname in j.links %}
-              <li><strong>{{ lang_names.get(lang_code, lang_code) }} ({{ fname }}):</strong>
-                <a class="download-link" href="{{ file_url }}">Stáhnout</a>
-              </li>
-            {% endfor %}
-          </ul>
-        </li>
+        </div>
+        <ul class="job-files">
+          {% for lang_code, file_url, fname in j.links %}
+          <li>
+            <strong>{{ lang_names.get(lang_code, lang_code) }} ({{ fname }}):</strong>
+            <a class="download-link" href="{{ file_url }}">Stáhnout</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </li>
       {% endfor %}
     </ul>
   </div>
