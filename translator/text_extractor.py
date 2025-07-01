@@ -10,7 +10,8 @@ def load_story_xml(story_path):
 
 def extract_content_elements(tree):
     """
-    Najde všechny <Content> elementy s textem k překladu
+    Najde všechny <Content> elementy s textem k překladu.
+    Elementy bez textu ignoruje.
     Vrací seznam (element, původní text)
     """
     content_elements = tree.xpath('//Content')
