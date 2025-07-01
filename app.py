@@ -2,6 +2,7 @@ from flask import Flask, request, render_template, send_from_directory
 import os
 from werkzeug.utils import secure_filename
 import contextlib
+import uuid
 
 from translator.idml_handler import (
     extract_idml,
@@ -27,6 +28,9 @@ app.config['RESULT_FOLDER'] = 'results'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['RESULT_FOLDER'], exist_ok=True)
 
+# Track progress for background jobs
+JOB_PROGRESS: dict[str, dict] = {}
+
 # Automatically remove old uploaded and result files
 MAX_FILE_AGE = 60 * 60  # seconds
 _CLEANUP_INTERVAL = 60 * 60
@@ -48,10 +52,19 @@ def _cleanup_old_files(path: str) -> None:
                     os.remove(file_path)
 
 
+def _cleanup_old_jobs() -> None:
+    """Remove stale entries from JOB_PROGRESS."""
+    now = time.time()
+    stale = [job for job, info in JOB_PROGRESS.items() if now - info.get('timestamp', now) > MAX_FILE_AGE]
+    for job in stale:
+        JOB_PROGRESS.pop(job, None)
+
+
 def _cleanup_worker() -> None:
     while True:
         _cleanup_old_files(app.config['UPLOAD_FOLDER'])
         _cleanup_old_files(app.config['RESULT_FOLDER'])
+        _cleanup_old_jobs()
         time.sleep(_CLEANUP_INTERVAL)
 
 
@@ -79,6 +92,9 @@ def index():
 
         if source_lang in selected_languages:
             selected_languages.remove(source_lang)
+
+        job_id = str(uuid.uuid4())
+        JOB_PROGRESS[job_id] = {"timestamp": time.time(), "progress": 0}
 
         filename = secure_filename(uploaded_file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -127,6 +143,8 @@ def index():
             output_file = f"{base_name}-{lang}.idml"
             output_path = os.path.join(app.config['RESULT_FOLDER'], output_file)
             repackage_idml(lang_dir, output_path)
+
+        JOB_PROGRESS[job_id]["progress"] = 100
 
         links = [
             (lang, f'/download/{base_name}-{lang}.idml')
