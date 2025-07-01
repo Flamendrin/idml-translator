@@ -56,10 +56,6 @@
       margin-top: 10px;
     }
 
-    .tag {
-      position: relative;
-    }
-
     .tag input {
       display: none;
     }
@@ -101,45 +97,72 @@
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     }
 
-    .job {
-      border-bottom: 1px solid #e5e7eb;
-      padding: 15px 0;
+    .results h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #047857;
+      font-size: 20px;
+      font-weight: 600;
     }
 
-    .job:last-child {
-      border-bottom: none;
+    .job {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      position: relative;
+      background: #f9fafb;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
 
     .job-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-
-    .job-files {
-      margin-top: 10px;
-      padding-left: 20px;
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 10px;
     }
 
     .remove-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
       background: none;
       border: none;
       font-size: 20px;
-      color: #ef4444;
+      color: #f43f5e;
       cursor: pointer;
+      transition: color 0.2s ease;
     }
 
     .remove-btn:hover {
-      color: #b91c1c;
+      color: #be123c;
+    }
+
+    .job-files {
+      padding-left: 10px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .job-files li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
     }
 
     .download-link {
       background: #10b981;
       color: white;
-      padding: 8px 14px;
-      border-radius: 10px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 14px;
       text-decoration: none;
       font-weight: 500;
+      transition: background 0.2s ease;
     }
 
     .download-link:hover {
@@ -233,10 +256,10 @@
       <li class="job">
         <div class="job-header">
           <span>{{ j.timestamp | datetimeformat }}</span>
-          <form method="post" action="/remove/{{ j.id }}">
-            <button class="remove-btn" type="submit" title="Smazat">❌</button>
-          </form>
         </div>
+        <form method="post" action="/remove/{{ j.id }}">
+          <button class="remove-btn" type="submit" title="Smazat">❌</button>
+        </form>
         <ul class="job-files">
           {% for lang_code, file_url, fname in j.links %}
           <li>
