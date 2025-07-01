@@ -69,11 +69,6 @@
       font-size: 14px;
       color: #777;
     }
-    .error {
-      color: red;
-      text-align: center;
-      margin-top: 20px;
-    }
     a.download-link {
       background: #28a745;
       color: white;
@@ -84,9 +79,10 @@
     a.download-link:hover { background: #1e7e34; }
     .error {
       max-width: 600px;
-      margin: 0 auto 20px;
+      margin: 20px auto;
       background: #f8d7da;
       color: #721c24;
+      text-align: center;
       padding: 15px 20px;
       border-radius: 5px;
       border: 1px solid #f5c6cb;
@@ -100,10 +96,6 @@
 </head>
 <body>
   <h1>Překladač IDML souborů</h1>
-  {% if error %}
-  <p class="error">{{ error }}</p>
-  {% endif %}
-
   {% if error %}
   <div class="error">{{ error }}</div>
   {% endif %}
