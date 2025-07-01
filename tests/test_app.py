@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 os.environ.setdefault("OPENAI_API_KEY", "test")
 from app import app, JOB_PROGRESS, _cleanup_old_jobs, MAX_FILE_AGE
+app.config['TESTING'] = True
 import time
 
 

@@ -23,18 +23,50 @@
       margin-top: 15px;
       font-weight: bold;
     }
-    select, input[type="file"], button {
+    select, input[type="file"], button, textarea {
       margin-top: 5px;
       padding: 8px;
       width: 100%;
       box-sizing: border-box;
     }
-    .checkbox-group {
-      margin-top: 10px;
+    textarea {
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
-    .checkbox-group label {
-      font-weight: normal;
-      display: block;
+    .tag-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .tag {
+      position: relative;
+    }
+    .tag input {
+      display: none;
+    }
+    .tag span {
+      padding: 5px 10px;
+      background: #eee;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tag input:checked + span {
+      background: #007bff;
+      color: #fff;
+    }
+    .progress-bar {
+      width: 100%;
+      background: #e0e0e0;
+      border-radius: 5px;
+      overflow: hidden;
+      height: 20px;
+      margin-top: 5px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #007bff;
+      width: 0;
     }
     button {
       background-color: #007bff;
@@ -92,26 +124,33 @@
     <input type="file" name="idml_file" accept=".idml" required>
 
     <label for="source_lang">Zdrojový jazyk:</label>
-    <select name="source_lang" required>
-      <option value="cs">Čeština</option>
-      <option value="en">Angličtina</option>
-      <option value="de">Němčina</option>
-      <option value="sk">Slovenština</option>
-      <option value="pl">Polština</option>
-      <option value="hu">Maďarština</option>
-    </select>
+    <div class="tag-group">
+      <label class="tag"><input type="radio" name="source_lang" value="cs" required><span>Čeština</span></label>
+      <label class="tag"><input type="radio" name="source_lang" value="en"><span>Angličtina</span></label>
+      <label class="tag"><input type="radio" name="source_lang" value="de"><span>Němčina</span></label>
+      <label class="tag"><input type="radio" name="source_lang" value="sk"><span>Slovenština</span></label>
+      <label class="tag"><input type="radio" name="source_lang" value="pl"><span>Polština</span></label>
+      <label class="tag"><input type="radio" name="source_lang" value="hu"><span>Maďarština</span></label>
+    </div>
 
     <label for="languages">Cílové jazyky:</label>
-    <div class="checkbox-group">
-      <label><input type="checkbox" name="languages" value="en"> Angličtina</label>
-      <label><input type="checkbox" name="languages" value="de"> Němčina</label>
-      <label><input type="checkbox" name="languages" value="sk"> Slovenština</label>
-      <label><input type="checkbox" name="languages" value="pl"> Polština</label>
-      <label><input type="checkbox" name="languages" value="hu"> Maďarština</label>
+    <div class="tag-group">
+      <label class="tag"><input type="checkbox" name="languages" value="en"><span>Angličtina</span></label>
+      <label class="tag"><input type="checkbox" name="languages" value="de"><span>Němčina</span></label>
+      <label class="tag"><input type="checkbox" name="languages" value="sk"><span>Slovenština</span></label>
+      <label class="tag"><input type="checkbox" name="languages" value="pl"><span>Polština</span></label>
+      <label class="tag"><input type="checkbox" name="languages" value="hu"><span>Maďarština</span></label>
     </div>
 
     <label for="prompt">AI Prompt:</label>
     <textarea name="prompt" rows="4">{{ prompt_text }}</textarea>
+
+    {% if job_id %}
+    <label>Průběh překladu:</label>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    {% endif %}
 
     <button type="submit">Nahrát a přeložit</button>
   </form>
@@ -133,5 +172,26 @@
   <div class="footer">
     &copy; 2025 IDML Translator – powered by Flask & ChatGPT API
   </div>
+  {% if job_id %}
+  <script>
+    const jobId = '{{ job_id }}';
+    const fill = document.getElementById('progress-fill');
+    if (jobId && fill) {
+      function poll() {
+        fetch('/progress/' + jobId)
+          .then(r => r.json())
+          .then(data => {
+            fill.style.width = data.progress + '%';
+            if (data.progress >= 100 && data.links) {
+              window.location.href = '/?job=' + jobId;
+            } else {
+              setTimeout(poll, 2000);
+            }
+          });
+      }
+      poll();
+    }
+  </script>
+  {% endif %}
 </body>
 </html>
