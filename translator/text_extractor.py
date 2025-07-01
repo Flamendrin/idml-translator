@@ -1,3 +1,7 @@
+"""Extraction utilities for manipulating Story XML within IDML files."""
+
+from __future__ import annotations
+
 from lxml import etree
 
 def load_story_xml(story_path):

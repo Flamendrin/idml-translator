@@ -1,3 +1,7 @@
+"""Thin wrapper around the OpenAI client used for translating text."""
+
+from __future__ import annotations
+
 import os
 import time
 from openai import OpenAI
@@ -14,12 +18,20 @@ LANGUAGE_MAP = {
     'hu': 'Hungarian',
 }
 
-def translate_text(text, source_lang, target_lang):
+def translate_text(text: str, source_lang: str, target_lang: str) -> str:
+    """Translate ``text`` from ``source_lang`` to ``target_lang`` using ChatGPT."""
     from_lang = LANGUAGE_MAP.get(source_lang, source_lang)
     to_lang = LANGUAGE_MAP.get(target_lang, target_lang)
     messages: list[ChatCompletionMessageParam] = [
-        {"role": "system", "content": f"You are a professional translator. Translate the following XML-safe text from {from_lang} to {to_lang}. Do not change XML tags."},
-        {"role": "user", "content": text}
+        {
+            "role": "system",
+            "content": (
+                "You are a professional translator. "
+                "Translate the following XML-safe text from "
+                f"{from_lang} to {to_lang}. Do not change XML tags."
+            ),
+        },
+        {"role": "user", "content": text},
     ]
     try:
         response = client.chat.completions.create(
@@ -32,7 +44,8 @@ def translate_text(text, source_lang, target_lang):
         print(f"❌ Chyba při překladu: {e}")
         return text
 
-def batch_translate(texts, target_langs, source_lang):
+def batch_translate(texts: list[str], target_langs: list[str], source_lang: str) -> dict[str, list[str]]:
+    """Translate a list of texts into multiple languages sequentially."""
     results = {lang: [] for lang in target_langs}
     for text in texts:
         for lang in target_langs:
