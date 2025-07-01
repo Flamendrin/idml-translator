@@ -6,6 +6,7 @@ import os
 import time
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
+import pycountry
 
 DEFAULT_PROMPT = (
     "You are a professional translator. "
@@ -16,12 +17,9 @@ DEFAULT_PROMPT = (
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 LANGUAGE_MAP = {
-    'cs': 'Czech',
-    'sk': 'Slovak',
-    'pl': 'Polish',
-    'en': 'English',
-    'de': 'German',
-    'hu': 'Hungarian',
+    lang.alpha_2: lang.name
+    for lang in pycountry.languages
+    if hasattr(lang, "alpha_2")
 }
 
 def translate_text(
