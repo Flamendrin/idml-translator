@@ -27,3 +27,10 @@ def test_cleanup_old_jobs_removes_stale_entries():
 
     assert 'old' not in JOB_PROGRESS
     assert 'new' in JOB_PROGRESS
+
+
+def test_index_template_has_autoscroll_script():
+    path = os.path.join('templates', 'index.html')
+    with open(path, encoding='utf-8') as f:
+        html = f.read()
+    assert 'scrollIntoView' in html
