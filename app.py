@@ -2,6 +2,8 @@ from flask import Flask, request, render_template, send_from_directory
 import os
 from werkzeug.utils import secure_filename
 import contextlib
+import uuid
+from typing import Dict
 
 from translator.idml_handler import (
     extract_idml,
@@ -30,6 +32,9 @@ os.makedirs(app.config['RESULT_FOLDER'], exist_ok=True)
 # Automatically remove old uploaded and result files
 MAX_FILE_AGE = 60 * 60  # seconds
 _CLEANUP_INTERVAL = 60 * 60
+
+jobs: Dict[str, dict] = {}
+jobs_lock = threading.Lock()
 
 
 def _cleanup_old_files(path: str) -> None:
@@ -144,6 +149,38 @@ def index():
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_from_directory(app.config['RESULT_FOLDER'], filename, as_attachment=True)
+
+
+def _run_translation_job(job_id: str, texts: list[str], languages: list[str], source_lang: str, prompt: str | None) -> None:
+    with jobs_lock:
+        jobs[job_id]['progress'] = 0
+    # Simulate some work so progress can update in tests
+    time.sleep(0.05)
+    with jobs_lock:
+        jobs[job_id]['progress'] = 50
+    batch_translate(texts, languages, source_lang, prompt)
+    with jobs_lock:
+        jobs[job_id]['progress'] = 100
+
+
+@app.route('/start-job', methods=['POST'])
+def start_job():
+    texts = request.json.get('texts', [])
+    languages = request.json.get('languages', [])
+    source_lang = request.json.get('source_lang')
+    prompt = request.json.get('prompt')
+    job_id = uuid.uuid4().hex
+    with jobs_lock:
+        jobs[job_id] = {'progress': 0}
+    threading.Thread(target=_run_translation_job, args=(job_id, texts, languages, source_lang, prompt), daemon=True).start()
+    return {'job_id': job_id}, 202
+
+
+@app.route('/progress/<job_id>')
+def progress(job_id: str):
+    with jobs_lock:
+        info = jobs.get(job_id, {'progress': 100})
+    return {'progress': info['progress']}
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
