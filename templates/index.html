@@ -119,9 +119,9 @@
   <div class="error">{{ error }}</div>
   {% endif %}
 
-  <form method="POST" enctype="multipart/form-data">
-    <label for="idml_file">Vyber IDML soubor:</label>
-    <input type="file" name="idml_file" accept=".idml" required>
+  <form method="POST" action="/" enctype="multipart/form-data">
+    <label for="idml_files">Vyber IDML soubory:</label>
+    <input type="file" name="idml_files" accept=".idml" multiple required>
 
     <label for="source_lang">Zdrojový jazyk:</label>
     <div class="tag-group">
@@ -159,9 +159,12 @@
   {% if links %}
   <div class="results">
     <h2>✅ Překlad dokončen</h2>
+    {% if expires_at %}
+    <p>Soubor bude dostupný do: {{ expires_at | datetimeformat }}</p>
+    {% endif %}
     <ul>
-      {% for lang_code, file_url in links %}
-        <li><strong>{{ lang_names[lang_code] }}:</strong>
+      {% for lang_code, file_url, fname in links %}
+        <li><strong>{{ lang_names.get(lang_code, lang_code) }} ({{ fname }}):</strong>
           <a class="download-link" href="{{ file_url }}">Stáhnout</a>
         </li>
       {% endfor %}
