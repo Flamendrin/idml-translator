@@ -56,14 +56,24 @@ def batch_translate(
     target_langs: list[str],
     source_lang: str,
     system_prompt: str | None = None,
+    progress_callback: callable | None = None,
 ) -> dict[str, list[str]]:
-    """Translate a list of texts into multiple languages sequentially."""
+    """Translate a list of texts into multiple languages sequentially.
+
+    ``progress_callback`` will be called with the percentage completed (0-100)
+    after each translation step if provided.
+    """
     results = {lang: [] for lang in target_langs}
+    total = max(1, len(texts) * len(target_langs))
+    done = 0
     for text in texts:
         for lang in target_langs:
             print(f"Překládám z {source_lang} do {lang}: {text[:40]}...")
             translation = translate_text(text, source_lang, lang, system_prompt)
             results[lang].append(translation)
+            done += 1
+            if progress_callback:
+                progress_callback(int(done / total * 100))
             time.sleep(1)
     return results
 
