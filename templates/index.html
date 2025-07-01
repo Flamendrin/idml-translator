@@ -202,6 +202,28 @@
       width: 0;
       transition: width 0.3s ease;
     }
+    .remove-form {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      margin: 0;
+    }
+    
+    .remove-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      color: #ef4444;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.2s ease;
+    }
+    
+    .remove-btn:hover {
+      color: #b91c1c;
+    }
+    
   </style>
 </head>
 <body>
@@ -257,7 +279,7 @@
         <div class="job-header">
           <span>{{ j.timestamp | datetimeformat }}</span>
         </div>
-        <form method="post" action="/remove/{{ j.id }}">
+        <form method="post" action="/remove/{{ j.id }}" class="remove-form">
           <button class="remove-btn" type="submit" title="Smazat">❌</button>
         </form>
         <ul class="job-files">
