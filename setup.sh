@@ -12,4 +12,4 @@ echo "📦 Instaluji Python balíčky..."
 pip install --upgrade pip
 pip install flask lxml openai python-dotenv
 
-echo "✅ Hotovo. Spusť ./start.sh pro spuštění aplikace."
+echo "✅ Hotovo. Spusťte ./start.sh pro spuštění aplikace."
