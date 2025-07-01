@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>IDML Překladač</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+      padding: 40px;
+    }
+    h1 { text-align: center; margin-bottom: 30px; }
+    form {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    select, input[type="file"], button {
+      margin-top: 5px;
+      padding: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .checkbox-group {
+      margin-top: 10px;
+    }
+    .checkbox-group label {
+      font-weight: normal;
+      display: block;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .results {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .spinner {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .spinner:after {
+      content: "⏳ Překlad probíhá, vyčkejte...";
+      display: block;
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      font-size: 14px;
+      color: #777;
+    }
+    a.download-link {
+      background: #28a745;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 5px;
+      text-decoration: none;
+    }
+    a.download-link:hover { background: #1e7e34; }
+  </style>
+  <script>
+    function showSpinner() {
+      document.getElementById('spinner').style.display = 'block';
+    }
+  </script>
+</head>
+<body>
+  <h1>Překladač IDML souborů</h1>
+
+  <form method="POST" enctype="multipart/form-data" onsubmit="showSpinner()">
+    <label for="idml_file">Vyber IDML soubor:</label>
+    <input type="file" name="idml_file" accept=".idml" required>
+
+    <label for="source_lang">Zdrojový jazyk:</label>
+    <select name="source_lang" required>
+      <option value="cs">Čeština</option>
+      <option value="en">Angličtina</option>
+      <option value="de">Němčina</option>
+      <option value="sk">Slovenština</option>
+      <option value="pl">Polština</option>
+      <option value="hu">Maďarština</option>
+    </select>
+
+    <label for="languages">Cílové jazyky:</label>
+    <div class="checkbox-group">
+      <label><input type="checkbox" name="languages" value="en"> Angličtina</label>
+      <label><input type="checkbox" name="languages" value="de"> Němčina</label>
+      <label><input type="checkbox" name="languages" value="sk"> Slovenština</label>
+      <label><input type="checkbox" name="languages" value="pl"> Polština</label>
+      <label><input type="checkbox" name="languages" value="hu"> Maďarština</label>
+    </div>
+
+    <button type="submit">Nahrát a přeložit</button>
+  </form>
+
+  <div id="spinner" class="spinner" style="display: none;"></div>
+
+  {% if links %}
+  <div class="results">
+    <h2>✅ Překlad dokončen</h2>
+    <ul>
+      {% for lang_code, file_url in links %}
+        <li><strong>{{ lang_names[lang_code] }}:</strong>
+          <a class="download-link" href="{{ file_url }}">Stáhnout</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    &copy; 2025 IDML Translator – powered by Flask & ChatGPT API
+  </div>
+</body>
+</html>
