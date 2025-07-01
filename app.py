@@ -1,6 +1,9 @@
-from flask import Flask, request, render_template, send_from_directory
+from flask import Flask, request, render_template, send_from_directory, jsonify
 import os
 from werkzeug.utils import secure_filename
+import contextlib
+import uuid
+
 
 from translator.idml_handler import (
     extract_idml,
@@ -14,7 +17,12 @@ from translator.text_extractor import (
     update_content_elements,
     save_story_xml
 )
-from translator.openai_client import batch_translate
+from translator.openai_client import batch_translate, DEFAULT_PROMPT
+import shutil
+import time
+import threading
+
+JOB_PROGRESS: dict[str, dict] = {}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -22,6 +30,100 @@ app.config['RESULT_FOLDER'] = 'results'
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['RESULT_FOLDER'], exist_ok=True)
+
+# Automatically remove old uploaded and result files
+MAX_FILE_AGE = 60 * 60  # seconds
+_CLEANUP_INTERVAL = 60 * 60
+
+
+def _cleanup_old_files(path: str) -> None:
+    now = time.time()
+    for name in os.listdir(path):
+        file_path = os.path.join(path, name)
+        try:
+            mtime = os.path.getmtime(file_path)
+        except OSError:
+            continue
+        if now - mtime > MAX_FILE_AGE:
+            if os.path.isdir(file_path):
+                shutil.rmtree(file_path, ignore_errors=True)
+            else:
+                with contextlib.suppress(FileNotFoundError):
+                    os.remove(file_path)
+
+
+def _cleanup_worker() -> None:
+    while True:
+        _cleanup_old_files(app.config['UPLOAD_FOLDER'])
+        _cleanup_old_files(app.config['RESULT_FOLDER'])
+        time.sleep(_CLEANUP_INTERVAL)
+
+
+threading.Thread(target=_cleanup_worker, daemon=True).start()
+
+
+def _translation_worker(
+    job_id: str,
+    file_path: str,
+    filename: str,
+    selected_languages: list[str],
+    source_lang: str,
+    system_prompt: str | None,
+) -> None:
+    base_name = os.path.splitext(filename)[0]
+    extract_dir = os.path.join(app.config['UPLOAD_FOLDER'], f'unpacked_original_{job_id}')
+    extract_idml(file_path, extract_dir)
+
+    story_files = find_story_files(extract_dir)
+    all_contents = []
+    all_texts: list[str] = []
+    for story_path in story_files:
+        tree = load_story_xml(story_path)
+        contents = extract_content_elements(tree)
+        all_contents.append((story_path, tree, contents))
+        for _, text in contents:
+            all_texts.append(text)
+
+    progress = JOB_PROGRESS[job_id]
+
+    def cb(done: int, total: int) -> None:
+        progress['done'] = done
+        progress['total'] = total
+        progress['percent'] = int(done / total * 100)
+
+    translations_by_lang = batch_translate(
+        all_texts,
+        selected_languages,
+        source_lang,
+        system_prompt,
+        cb,
+    )
+
+    links: list[tuple[str, str]] = []
+    for lang in selected_languages:
+        lang_dir = os.path.join(app.config['UPLOAD_FOLDER'], f'unpacked_{lang}_{job_id}')
+        copy_unpacked_dir(extract_dir, lang_dir)
+
+        index = 0
+        for story_path, _, contents in all_contents:
+            rel_path = os.path.relpath(story_path, extract_dir)
+            new_story_path = os.path.join(lang_dir, rel_path)
+
+            tree = load_story_xml(new_story_path)
+            local_contents = extract_content_elements(tree)
+            translations = translations_by_lang[lang][index : index + len(local_contents)]
+            update_content_elements(local_contents, translations)
+            save_story_xml(tree, new_story_path)
+
+            index += len(local_contents)
+
+        output_file = f"{base_name}-{lang}.idml"
+        output_path = os.path.join(app.config['RESULT_FOLDER'], output_file)
+        repackage_idml(lang_dir, output_path)
+        links.append((lang, f'/download/{output_file}'))
+
+    progress['links'] = links
+    progress['percent'] = 100
 
 LANGUAGE_NAMES = {
     'cs': 'Čeština',
@@ -32,73 +134,46 @@ LANGUAGE_NAMES = {
     'hu': 'Maďarština'
 }
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        uploaded_file = request.files.get('idml_file')
-        selected_languages = request.form.getlist('languages')
-        source_lang = request.form.get('source_lang')
+@app.route('/', methods=['GET'])
+def index() -> str:
+    return render_template('index.html', prompt_text=DEFAULT_PROMPT, lang_names=LANGUAGE_NAMES)
 
-        if not uploaded_file or not uploaded_file.filename.endswith('.idml'):
-            return render_template('index.html', error="❌ Prosím nahraj platný .idml soubor.")
 
-        if source_lang in selected_languages:
-            selected_languages.remove(source_lang)
+@app.route('/', methods=['POST'])
+def start_translation() -> str:
+    uploaded_file = request.files.get('idml_file')
+    lang_field = request.form.get('languages', '')
+    selected_languages = [c.strip() for c in lang_field.split(',') if c.strip()]
+    source_lang = request.form.get('source_lang', '').strip()
+    system_prompt = request.form.get('prompt', '').strip() or None
 
-        filename = secure_filename(uploaded_file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        uploaded_file.save(file_path)
+    if not uploaded_file or not uploaded_file.filename.endswith('.idml'):
+        return render_template('index.html', error="❌ Prosím nahraj platný .idml soubor.", prompt_text=DEFAULT_PROMPT, lang_names=LANGUAGE_NAMES)
 
-        base_name = os.path.splitext(filename)[0]
-        extract_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'unpacked_original')
-        extract_idml(file_path, extract_dir)
+    if source_lang in selected_languages:
+        selected_languages.remove(source_lang)
 
-        story_files = find_story_files(extract_dir)
+    filename = secure_filename(uploaded_file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    uploaded_file.save(file_path)
 
-        all_contents = []
-        all_texts = []
-        for story_path in story_files:
-            tree = load_story_xml(story_path)
-            contents = extract_content_elements(tree)
-            all_contents.append((story_path, tree, contents))
-            for _, text in contents:
-                all_texts.append(text)
+    job_id = str(uuid.uuid4())
+    JOB_PROGRESS[job_id] = {"percent": 0, "done": 0, "total": 0, "links": None}
+    thread = threading.Thread(
+        target=_translation_worker,
+        args=(job_id, file_path, filename, selected_languages, source_lang, system_prompt),
+        daemon=True,
+    )
+    thread.start()
+    return render_template('progress.html', job_id=job_id, lang_names=LANGUAGE_NAMES)
 
-        translations_by_lang = batch_translate(all_texts, selected_languages, source_lang)
 
-        for lang in selected_languages:
-            lang_dir = os.path.join(app.config['UPLOAD_FOLDER'], f'unpacked_{lang}')
-            copy_unpacked_dir(extract_dir, lang_dir)
-
-            index = 0
-            for story_path, _, contents in all_contents:
-                rel_path = os.path.relpath(story_path, extract_dir)
-                new_story_path = os.path.join(lang_dir, rel_path)
-
-                tree = load_story_xml(new_story_path)
-                local_contents = extract_content_elements(tree)
-
-                translations = translations_by_lang[lang][index : index + len(local_contents)]
-                update_content_elements(local_contents, translations)
-                save_story_xml(tree, new_story_path)
-
-                index += len(local_contents)
-
-            output_file = f"{base_name}-{lang}.idml"
-            output_path = os.path.join(app.config['RESULT_FOLDER'], output_file)
-            repackage_idml(lang_dir, output_path)
-
-        links = [
-            (lang, f'/download/{base_name}-{lang}.idml')
-            for lang in selected_languages
-        ]
-        return render_template(
-            'index.html',
-            links=links,
-            lang_names=LANGUAGE_NAMES
-        )
-
-    return render_template('index.html')
+@app.route('/progress/<job_id>')
+def progress(job_id: str):
+    info = JOB_PROGRESS.get(job_id)
+    if not info:
+        return jsonify({'error': 'unknown job'}), 404
+    return jsonify({'percent': info.get('percent', 0), 'links': info.get('links')})
 
 @app.route('/download/<filename>')
 def download_file(filename):
