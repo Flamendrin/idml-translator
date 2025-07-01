@@ -55,15 +55,13 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    .spinner {
-      text-align: center;
+    .progress-wrapper {
       margin-top: 30px;
+      text-align: center;
     }
-    .spinner:after {
-      content: "⏳ Překlad probíhá, vyčkejte...";
-      display: block;
-      margin-top: 10px;
-      font-style: italic;
+    progress {
+      width: 100%;
+      height: 20px;
     }
     .footer {
       text-align: center;
@@ -93,11 +91,73 @@
       border-radius: 5px;
       border: 1px solid #f5c6cb;
     }
+    .tag-input {
+      border: 1px solid #ccc;
+      padding: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .tag-input input {
+      border: none;
+      flex: 1;
+      min-width: 80px;
+    }
+    .tag {
+      background: #007bff;
+      color: #fff;
+      border-radius: 3px;
+      padding: 2px 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag span { cursor: pointer; }
   </style>
   <script>
-    function showSpinner() {
-      document.getElementById('spinner').style.display = 'block';
-    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('langTags');
+      const input = document.getElementById('langInput');
+      const hidden = document.getElementById('languagesHidden');
+      const tags = [];
+
+      function render() {
+        container.querySelectorAll('.tag').forEach(t => t.remove());
+        tags.forEach(code => {
+          const span = document.createElement('span');
+          span.className = 'tag';
+          span.textContent = code;
+          const x = document.createElement('span');
+          x.textContent = '×';
+          x.onclick = () => { remove(code); };
+          span.appendChild(x);
+          container.insertBefore(span, input);
+        });
+        hidden.value = tags.join(',');
+      }
+
+      function add(code) {
+        if (!code || tags.includes(code)) return;
+        tags.push(code);
+        render();
+      }
+
+      function remove(code) {
+        const i = tags.indexOf(code);
+        if (i >= 0) tags.splice(i, 1);
+        render();
+      }
+
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          const val = input.value.replace(',', '').trim();
+          add(val);
+          input.value = '';
+        }
+      });
+    });
   </script>
 </head>
 <body>
@@ -110,33 +170,31 @@
   <div class="error">{{ error }}</div>
   {% endif %}
 
-  <form method="POST" enctype="multipart/form-data" onsubmit="showSpinner()">
+  <form method="POST" enctype="multipart/form-data">
     <label for="idml_file">Vyber IDML soubor:</label>
     <input type="file" name="idml_file" accept=".idml" required>
 
     <label for="source_lang">Zdrojový jazyk:</label>
-    <select name="source_lang" required>
-      <option value="cs">Čeština</option>
-      <option value="en">Angličtina</option>
-      <option value="de">Němčina</option>
-      <option value="sk">Slovenština</option>
-      <option value="pl">Polština</option>
-      <option value="hu">Maďarština</option>
-    </select>
+    <input type="text" name="source_lang" list="langCodes" required>
 
     <label for="languages">Cílové jazyky:</label>
-    <div class="checkbox-group">
-      <label><input type="checkbox" name="languages" value="en"> Angličtina</label>
-      <label><input type="checkbox" name="languages" value="de"> Němčina</label>
-      <label><input type="checkbox" name="languages" value="sk"> Slovenština</label>
-      <label><input type="checkbox" name="languages" value="pl"> Polština</label>
-      <label><input type="checkbox" name="languages" value="hu"> Maďarština</label>
+    <div id="langTags" class="tag-input">
+      <input id="langInput" type="text" list="langCodes" placeholder="zadejte kód a Enter">
     </div>
+    <input type="hidden" name="languages" id="languagesHidden">
+
+    <datalist id="langCodes">
+      {% for code, name in lang_names.items() %}
+      <option value="{{ code }}">{{ name }}</option>
+      {% endfor %}
+    </datalist>
+
+    <label for="prompt">AI Prompt:</label>
+    <textarea name="prompt" rows="4">{{ prompt_text }}</textarea>
 
     <button type="submit">Nahrát a přeložit</button>
   </form>
 
-  <div id="spinner" class="spinner" style="display: none;"></div>
 
   {% if links %}
   <div class="results">
