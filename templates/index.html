@@ -79,6 +79,15 @@
       text-decoration: none;
     }
     a.download-link:hover { background: #1e7e34; }
+    .error {
+      max-width: 600px;
+      margin: 0 auto 20px;
+      background: #f8d7da;
+      color: #721c24;
+      padding: 15px 20px;
+      border-radius: 5px;
+      border: 1px solid #f5c6cb;
+    }
   </style>
   <script>
     function showSpinner() {
@@ -88,6 +97,10 @@
 </head>
 <body>
   <h1>Překladač IDML souborů</h1>
+
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
 
   <form method="POST" enctype="multipart/form-data" onsubmit="showSpinner()">
     <label for="idml_file">Vyber IDML soubor:</label>
