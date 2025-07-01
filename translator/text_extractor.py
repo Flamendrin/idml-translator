@@ -13,7 +13,10 @@ def extract_content_elements(tree):
     Najde všechny <Content> elementy s textem k překladu
     Vrací seznam (element, původní text)
     """
-    content_elements = tree.xpath('//Content')
+    # IDML soubory používají výchozí XML jmenné prostory, takže běžný XPath
+    # '//Content' by nenašel žádné elementy. Hledáme proto podle jména
+    # elementu bez ohledu na namespace.
+    content_elements = tree.xpath('//*[local-name()="Content"]')
     result = []
     for el in content_elements:
         if el.text and el.text.strip():  # ignoruj prázdné
