@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template, send_from_directory
 import os
 from werkzeug.utils import secure_filename
+import contextlib
 
 from translator.idml_handler import (
     extract_idml,
@@ -14,7 +15,10 @@ from translator.text_extractor import (
     update_content_elements,
     save_story_xml
 )
-from translator.openai_client import batch_translate
+from translator.openai_client import batch_translate, DEFAULT_PROMPT
+import shutil
+import time
+import threading
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -22,6 +26,36 @@ app.config['RESULT_FOLDER'] = 'results'
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['RESULT_FOLDER'], exist_ok=True)
+
+# Automatically remove old uploaded and result files
+MAX_FILE_AGE = 60 * 60  # seconds
+_CLEANUP_INTERVAL = 60 * 60
+
+
+def _cleanup_old_files(path: str) -> None:
+    now = time.time()
+    for name in os.listdir(path):
+        file_path = os.path.join(path, name)
+        try:
+            mtime = os.path.getmtime(file_path)
+        except OSError:
+            continue
+        if now - mtime > MAX_FILE_AGE:
+            if os.path.isdir(file_path):
+                shutil.rmtree(file_path, ignore_errors=True)
+            else:
+                with contextlib.suppress(FileNotFoundError):
+                    os.remove(file_path)
+
+
+def _cleanup_worker() -> None:
+    while True:
+        _cleanup_old_files(app.config['UPLOAD_FOLDER'])
+        _cleanup_old_files(app.config['RESULT_FOLDER'])
+        time.sleep(_CLEANUP_INTERVAL)
+
+
+threading.Thread(target=_cleanup_worker, daemon=True).start()
 
 LANGUAGE_NAMES = {
     'cs': 'Čeština',
@@ -38,6 +72,7 @@ def index():
         uploaded_file = request.files.get('idml_file')
         selected_languages = request.form.getlist('languages')
         source_lang = request.form.get('source_lang')
+        system_prompt = request.form.get('prompt', '').strip() or None
 
         if not uploaded_file or not uploaded_file.filename.endswith('.idml'):
             return render_template('index.html', error="❌ Prosím nahraj platný .idml soubor.")
@@ -64,7 +99,12 @@ def index():
             for _, text in contents:
                 all_texts.append(text)
 
-        translations_by_lang = batch_translate(all_texts, selected_languages, source_lang)
+        translations_by_lang = batch_translate(
+            all_texts,
+            selected_languages,
+            source_lang,
+            system_prompt,
+        )
 
         for lang in selected_languages:
             lang_dir = os.path.join(app.config['UPLOAD_FOLDER'], f'unpacked_{lang}')
@@ -95,10 +135,11 @@ def index():
         return render_template(
             'index.html',
             links=links,
-            lang_names=LANGUAGE_NAMES
+            lang_names=LANGUAGE_NAMES,
+            prompt_text=system_prompt or DEFAULT_PROMPT
         )
 
-    return render_template('index.html')
+    return render_template('index.html', prompt_text=DEFAULT_PROMPT)
 
 @app.route('/download/<filename>')
 def download_file(filename):
