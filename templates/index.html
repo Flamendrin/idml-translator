@@ -202,21 +202,24 @@
       width: 0;
       transition: width 0.3s ease;
     }
+    
     .remove-form {
       position: absolute;
       top: 16px;
       right: 16px;
       margin: 0;
+      padding: 0;
     }
     
     .remove-btn {
-      background: none;
-      border: none;
+      all: unset; /* Tím resetujeme všechny výchozí styly */
       font-size: 22px;
       color: #ef4444;
       cursor: pointer;
-      padding: 0;
       line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: color 0.2s ease;
     }
     
