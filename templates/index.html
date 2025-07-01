@@ -239,5 +239,14 @@
     }
   </script>
   {% endif %}
+  <script>
+    // Scroll to the list of available translations on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const results = document.querySelector('.results');
+      if (results) {
+        results.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  </script>
 </body>
 </html>
