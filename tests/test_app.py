@@ -12,7 +12,7 @@ import time
 def test_index_non_idml_file_shows_error_message():
     client = app.test_client()
     data = {
-        'idml_file': (io.BytesIO(b'dummy'), 'test.txt')
+        'idml_files': [(io.BytesIO(b'dummy'), 'test.txt')]
     }
     response = client.post('/', data=data, content_type='multipart/form-data')
     assert "❌ Prosím nahraj platný .idml soubor." in response.get_data(as_text=True)
