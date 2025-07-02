@@ -119,23 +119,17 @@ def _split_batches(texts: list[str], max_tokens: int, model: str) -> list[list[s
 
 def _parse_numbered(translated: str) -> list[str]:
     """Parse numbered translation output into a list of texts."""
-    lines = [line.strip() for line in translated.splitlines() if line.strip()]
+    import re
+
+    lines = [line for line in translated.splitlines() if line.strip()]
     results: list[str] = []
+    pattern = re.compile(r"^\s*\d+\W*\s*(.*)$")
     for line in lines:
-        if line[0].isdigit():
-            # remove leading number + punctuation
-            parts = line.split(".", 1)
-            if len(parts) == 2 and parts[0].strip().isdigit():
-                results.append(parts[1].strip())
-            else:
-                parts = line.split(" ", 1)
-                if len(parts) == 2 and parts[0].strip().isdigit():
-                    results.append(parts[1].strip())
-                else:
-                    results.append(line)
+        match = pattern.match(line)
+        if match:
+            results.append(match.group(1))
         elif results:
-            # continuation of previous line
-            results[-1] += " " + line
+            results[-1] += " " + line.strip()
     return results
 
 
