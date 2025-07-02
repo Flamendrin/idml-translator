@@ -25,7 +25,11 @@ from translator.text_extractor import (
     update_content_elements,
     save_story_xml
 )
-from translator.openai_client import batch_translate, DEFAULT_PROMPT
+from translator.openai_client import (
+    batch_translate,
+    DEFAULT_PROMPT,
+    get_remaining_credit,
+)
 from translator.token_estimator import (
     count_tokens,
     estimate_cost,
@@ -325,6 +329,13 @@ def estimate():
     tokens = estimate_total_tokens(texts, model)
     cost = estimate_cost(tokens, model, len(selected_languages))
     return jsonify({'tokens': tokens, 'cost': round(cost, 4)})
+
+
+@app.route('/credit')
+def credit():
+    """Return remaining credit for the configured API key."""
+    value = get_remaining_credit()
+    return jsonify({'credit': value})
 
 
 @app.route('/progress/<job_id>')

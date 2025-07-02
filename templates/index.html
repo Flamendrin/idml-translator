@@ -45,6 +45,7 @@
     </select>
 
     <div id="estimate-info" style="margin-top:10px;font-weight:bold;"></div>
+    <div id="credit-info" style="margin-top:10px;font-weight:bold;"></div>
 
     <label for="prompt">AI Prompt:</label>
     <textarea name="prompt" rows="4">{{ prompt_text }}</textarea>
@@ -135,7 +136,26 @@
       document.querySelectorAll('input[name="languages"]').forEach(el => el.addEventListener('change', estimateTokens));
       if (fileInput) fileInput.addEventListener('change', estimateTokens);
       if (modelSelect) modelSelect.addEventListener('change', estimateTokens);
+      loadCredit();
     });
+  </script>
+  <script>
+    async function loadCredit() {
+      const info = document.getElementById('credit-info');
+      if (!info) return;
+      try {
+        const res = await fetch('/credit');
+        if (!res.ok) throw new Error();
+        const json = await res.json();
+        if (json.credit !== null && json.credit !== undefined) {
+          info.textContent = `Zbývající kredit: $${json.credit.toFixed(4)}`;
+        } else {
+          info.textContent = '';
+        }
+      } catch (e) {
+        info.textContent = '';
+      }
+    }
   </script>
   <script>
     async function loadTranslations() {
