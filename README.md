@@ -18,6 +18,8 @@ The web UI includes a drop-down to select the chat model for each translation jo
 
 The app can also show the remaining credit for your OpenAI API key via the
 ``/credit`` endpoint which the front-end displays under the model selector.
+If the API key is missing or the credit endpoint cannot be reached the page
+will show ``Zbývající kredit není dostupný`` instead.
 
 When IDML files and target languages are selected the page now displays an
 estimate of the number of tokens that will be sent to the OpenAI API along with

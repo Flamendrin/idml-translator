@@ -150,3 +150,21 @@ def test_credit_route(monkeypatch):
     resp = client.get('/credit')
     assert resp.status_code == 200
     assert resp.get_json() == {'credit': 42.0}
+
+
+def test_credit_route_unavailable(monkeypatch):
+    monkeypatch.setattr(app_module, 'get_remaining_credit', lambda: None)
+    os.environ['OPENAI_API_KEY'] = 'test'
+    client = app.test_client()
+    resp = client.get('/credit')
+    assert resp.status_code == 200
+    assert resp.get_json() == {'credit': None, 'error': 'unavailable'}
+
+
+def test_credit_route_missing_key(monkeypatch):
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    monkeypatch.setattr(app_module, 'get_remaining_credit', lambda: 42.0)
+    client = app.test_client()
+    resp = client.get('/credit')
+    assert resp.status_code == 200
+    assert resp.get_json() == {'credit': None, 'error': 'unavailable'}
