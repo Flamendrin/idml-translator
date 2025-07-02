@@ -38,20 +38,17 @@ def _set_inner_xml(el: etree._Element, xml: str) -> None:
     for child in wrapper:
         el.append(child)
 
-def load_story_xml(story_path):
-    """
-    Načte XML strom ze souboru
-    """
+def load_story_xml(story_path: str) -> etree._ElementTree:
+    """Load a Story XML file and return an ``ElementTree`` instance."""
+
     parser = etree.XMLParser(remove_blank_text=False)
     tree = etree.parse(str(story_path), parser)
     return tree
 
-def extract_content_elements(tree):
-    """
-    Najde všechny <Content> elementy s textem k překladu.
-    Elementy bez textu ignoruje.
-    Vrací seznam (element, původní text)
-    """
+def extract_content_elements(
+    tree: etree._ElementTree,
+) -> list[tuple[etree._Element, str, list[str]]]:
+    """Return all ``<Content>`` elements containing translatable text."""
     # IDML soubory používají výchozí XML jmenné prostory, takže běžný XPath
     # '//Content' by nenašel žádné elementy. Hledáme proto podle jména
     # elementu bez ohledu na namespace.
@@ -66,16 +63,15 @@ def extract_content_elements(tree):
             result.append((el, text, tags))
     return result
 
-def update_content_elements(content_list, translations):
-    """
-    Přepíše obsah elementů přeloženým textem
-    """
+def update_content_elements(
+    content_list: list[tuple[etree._Element, str, list[str]]],
+    translations: list[str],
+) -> None:
+    """Replace the ``<Content>`` elements with their translated counterparts."""
     for (el, _, tags), new_text in zip(content_list, translations):
         xml = _placeholders_to_tags(new_text, tags)
         _set_inner_xml(el, xml)
 
-def save_story_xml(tree, output_path):
-    """
-    Uloží zpět upravený XML strom
-    """
+def save_story_xml(tree: etree._ElementTree, output_path: str) -> None:
+    """Write ``tree`` back to ``output_path`` preserving formatting."""
     tree.write(str(output_path), encoding='UTF-8', pretty_print=True, xml_declaration=True)

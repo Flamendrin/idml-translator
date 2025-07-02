@@ -56,6 +56,8 @@ _CLEANUP_INTERVAL = 60 * 60
 
 
 def _cleanup_old_files(path: str) -> None:
+    """Remove files older than ``MAX_FILE_AGE`` from ``path``."""
+
     now = time.time()
     for name in os.listdir(path):
         file_path = os.path.join(path, name)
@@ -80,6 +82,8 @@ def _cleanup_old_jobs() -> None:
 
 
 def _cleanup_worker() -> None:
+    """Periodically purge old files and job metadata."""
+
     while True:
         _cleanup_old_files(app.config['UPLOAD_FOLDER'])
         _cleanup_old_files(app.config['RESULT_FOLDER'])
@@ -137,6 +141,7 @@ def _run_translation_job(
     system_prompt: str | None,
     model: str,
 ) -> None:
+    """Background worker that translates uploaded files."""
     links: list[tuple[str, str, str]] = []  # (lang, url, filename)
     total_steps = 0
     for file_path, _ in files:
@@ -294,6 +299,7 @@ def download_file(filename):
 
 @app.route('/estimate', methods=['POST'])
 def estimate():
+    """Return a rough token and cost estimate for uploaded files."""
     uploaded_files = request.files.getlist('idml_files')
     selected_languages = request.form.getlist('languages')
     model = request.form.get('model', DEFAULT_MODEL)
@@ -323,6 +329,7 @@ def estimate():
 
 @app.route('/progress/<job_id>')
 def progress(job_id: str):
+    """Return progress information for a running job."""
     info = JOB_PROGRESS.get(job_id)
     if not info:
         return jsonify({'progress': 100, 'links': []})
@@ -331,6 +338,7 @@ def progress(job_id: str):
 
 @app.route('/translations')
 def translations():
+    """Return metadata about completed translation jobs."""
     completed_jobs = [
         {
             "id": jid,
@@ -346,6 +354,7 @@ def translations():
 
 @app.route('/remove/<job_id>', methods=['POST'])
 def remove_job(job_id: str):
+    """Delete result files associated with a finished job."""
     info = JOB_PROGRESS.pop(job_id, None)
     if info and info.get('links'):
         for _, _, fname in info['links']:
