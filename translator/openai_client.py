@@ -183,6 +183,7 @@ def batch_translate(
     source_lang: str,
     system_prompt: str | None = None,
     progress_callback: callable | None = None,
+    tokens_callback: callable | None = None,
     *,
     max_tokens: int = 800,
     delay: float | None = 1.0,
@@ -219,6 +220,8 @@ def batch_translate(
                     messages=translator.messages,
                     temperature=0.3,
                 )
+                if tokens_callback and getattr(response, "usage", None):
+                    tokens_callback(getattr(response.usage, "total_tokens", 0))
                 reply = response.choices[0].message.content.strip("\n")
                 translator.messages.append({"role": "assistant", "content": reply})
                 if len(translator.messages) > ChatTranslator.HISTORY_LIMIT + 1:
@@ -248,6 +251,7 @@ async def async_batch_translate(
     source_lang: str,
     system_prompt: str | None = None,
     progress_callback: callable | None = None,
+    tokens_callback: callable | None = None,
     *,
     max_tokens: int = 800,
     delay: float | None = None,
@@ -289,6 +293,8 @@ async def async_batch_translate(
                 messages=translator.messages,
                 temperature=0.3,
             )
+            if tokens_callback and getattr(response, "usage", None):
+                tokens_callback(getattr(response.usage, "total_tokens", 0))
             reply = response.choices[0].message.content.strip("\n")
             translator.messages.append({"role": "assistant", "content": reply})
             if len(translator.messages) > ChatTranslator.HISTORY_LIMIT + 1:

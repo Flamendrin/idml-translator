@@ -144,9 +144,9 @@ def test_estimate_deduplicates_texts(monkeypatch, tmp_path):
     assert result == {'tokens': len(captured['texts']), 'cost': expected}
 
 
-def test_credit_route(monkeypatch):
-    monkeypatch.setattr(app_module, 'get_remaining_credit', lambda: 42.0)
+def test_tokens_route_returns_last_value(monkeypatch):
+    app_module.LAST_TOKENS_USED = 123
     client = app.test_client()
-    resp = client.get('/credit')
+    resp = client.get('/tokens')
     assert resp.status_code == 200
-    assert resp.get_json() == {'credit': 42.0}
+    assert resp.get_json() == {'tokens': 123}

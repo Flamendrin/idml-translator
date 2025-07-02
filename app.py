@@ -54,6 +54,9 @@ os.makedirs(app.config['RESULT_FOLDER'], exist_ok=True)
 # Track progress for background jobs
 JOB_PROGRESS: dict[str, dict] = {}
 
+# Tokens consumed by the most recent translation job
+LAST_TOKENS_USED = 0
+
 # Automatically remove old uploaded and result files
 MAX_FILE_AGE = 60 * 60  # seconds
 _CLEANUP_INTERVAL = 60 * 60
@@ -155,6 +158,13 @@ def _run_translation_job(
 
     steps_done = 0
 
+    global LAST_TOKENS_USED
+    tokens_used = 0
+
+    def _add_tokens(count: int) -> None:
+        nonlocal tokens_used
+        tokens_used += count
+
     for file_path, base_name in files:
         extract_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'unpacked_original')
         extract_idml(file_path, extract_dir)
@@ -179,6 +189,7 @@ def _run_translation_job(
             source_lang,
             system_prompt,
             progress_callback=_progress,
+            tokens_callback=_add_tokens,
             model=model,
         )
 
@@ -211,6 +222,8 @@ def _run_translation_job(
     JOB_PROGRESS[job_id]["progress"] = 100
     JOB_PROGRESS[job_id]["links"] = links
     JOB_PROGRESS[job_id]["expires_at"] = JOB_PROGRESS[job_id]["timestamp"] + MAX_FILE_AGE
+    JOB_PROGRESS[job_id]["tokens"] = tokens_used
+    LAST_TOKENS_USED = tokens_used
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -334,8 +347,19 @@ def estimate():
 @app.route('/credit')
 def credit():
     """Return remaining credit for the configured API key."""
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        return jsonify({'credit': None, 'error': 'unavailable'})
     value = get_remaining_credit()
+    if value is None:
+        return jsonify({'credit': None, 'error': 'unavailable'})
     return jsonify({'credit': value})
+
+
+@app.route('/tokens')
+def tokens():
+    """Return number of tokens used in the most recent translation job."""
+    return jsonify({'tokens': LAST_TOKENS_USED})
 
 
 @app.route('/progress/<job_id>')
