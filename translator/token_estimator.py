@@ -44,10 +44,18 @@ def estimate_cost(tokens: int, model: str, languages: int = 1) -> float:
 def estimate_total_tokens(
     texts: list[str],
     model: str,
+    languages: int = 1,
     system_prompt: str = DEFAULT_SYSTEM_PROMPT,
 ) -> int:
-    """Return a rough estimate of tokens sent for translating ``texts``."""
+    """Return a rough estimate of total tokens for translating ``texts``.
+
+    The estimate includes both request and response tokens and scales with the
+    number of target languages.  It still remains an approximation but should be
+    closer to the actual usage reported by the OpenAI API.
+    """
     unique = list(dict.fromkeys(texts))
+
+    # Tokens for the user's request
     tokens = count_tokens(unique, model)
     tokens += count_tokens([system_prompt], model)
     tokens += count_tokens(
@@ -59,5 +67,14 @@ def estimate_total_tokens(
     )
     markers = [f"[[SEG{i+1}]]" for i in range(len(unique))]
     tokens += count_tokens(markers, model)
-    return tokens
+
+    # Rough protocol overhead for a single chat completion
+    overhead = 3 if model.startswith("gpt-4") else 4
+    tokens += overhead * 2  # user + assistant
+
+    # Assume replies are roughly the same length as the source
+    response_tokens = count_tokens(unique, model)
+
+    total = (tokens + response_tokens + overhead) * max(1, languages)
+    return total
 
