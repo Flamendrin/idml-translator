@@ -7,6 +7,7 @@ import time
 import asyncio
 from openai import OpenAI, AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
+from translator.token_estimator import count_tokens
 
 try:
     import pycountry  # type: ignore
@@ -98,13 +99,13 @@ def translate_text(
         print(f"❌ Chyba při překladu: {e}")
         return text
 
-def _split_batches(texts: list[str], max_tokens: int) -> list[list[str]]:
-    """Split ``texts`` into batches not exceeding ``max_tokens`` words."""
+def _split_batches(texts: list[str], max_tokens: int, model: str) -> list[list[str]]:
+    """Split ``texts`` into batches not exceeding ``max_tokens`` tokens."""
     batches: list[list[str]] = []
     current: list[str] = []
     tokens = 0
     for text in texts:
-        count = len(text.split())
+        count = count_tokens([text], model)
         if current and tokens + count > max_tokens:
             batches.append(current)
             current = []
@@ -167,7 +168,7 @@ def batch_translate(
 
     for lang, translator in translators.items():
         to_translate = [t for t in unique_texts if t not in translator.cache]
-        for batch in _split_batches(to_translate, max_tokens):
+        for batch in _split_batches(to_translate, max_tokens, model):
             numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
             prompt = (
                 f"Translate the following pieces numbered 1..{len(batch)}. "
@@ -260,7 +261,7 @@ async def async_batch_translate(
 
     for lang, translator in translators.items():
         to_translate = [t for t in unique_texts if t not in translator.cache]
-        for batch in _split_batches(to_translate, max_tokens):
+        for batch in _split_batches(to_translate, max_tokens, model):
             tasks.append(translate_batch(lang, translator, batch))
 
     if tasks:

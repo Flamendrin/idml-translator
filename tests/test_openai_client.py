@@ -72,3 +72,11 @@ def test_async_batch_translate(monkeypatch):
     assert result['de'] == ['Hi_t', 'Bye_t']
     assert len(calls) == 2
     assert models == ['gpt-3.5-turbo', 'gpt-3.5-turbo']
+
+
+def test_split_batches_respects_tokens(monkeypatch):
+    monkeypatch.setattr(openai_client, 'count_tokens', lambda texts, model: len(texts[0]))
+
+    texts = ['aaaaa', 'bb', 'ccc']
+    batches = openai_client._split_batches(texts, 5, 'gpt-3.5-turbo')
+    assert batches == [['aaaaa'], ['bb', 'ccc']]
