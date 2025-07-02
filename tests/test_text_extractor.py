@@ -35,3 +35,19 @@ def test_extract_and_update_with_markup():
     update_content_elements(results, ["Ahoj[[TAG1]]tučně[[TAG2]]!"])
     content = etree.tostring(tree, encoding="unicode")
     assert "Ahoj<b>tučně</b>!" in content
+
+
+def test_extract_and_update_with_br():
+    xml = """
+    <Root>
+        <Content>Hello<br/>World</Content>
+    </Root>
+    """
+    tree = etree.fromstring(xml)
+    results = extract_content_elements(tree)
+    assert results[0][1] == "Hello[[TAG1]]World"
+    assert results[0][2] == ["<br/>"]
+
+    update_content_elements(results, ["Ahoj[[TAG1]]Svete"])
+    content = etree.tostring(tree, encoding="unicode")
+    assert "Ahoj<br/>Svete" in content

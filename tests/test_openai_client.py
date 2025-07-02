@@ -13,8 +13,8 @@ def test_batch_translate_batches_and_caches(monkeypatch):
 
     def fake_create(*args, **kwargs):
         prompt = kwargs['messages'][-1]['content']
-        lines = [l for l in prompt.splitlines() if l.strip() and l.strip()[0].isdigit()]
-        pieces = [l.split('.', 1)[1].strip() if '.' in l else l for l in lines]
+        lines = [l for l in prompt.splitlines() if l.strip().startswith('[[SEG')]
+        pieces = [l.split(']]', 1)[1].strip() for l in lines]
 
         class M:
             pass
@@ -23,7 +23,7 @@ def test_batch_translate_batches_and_caches(monkeypatch):
         resp.choices = [M()]
         resp.choices[0].message = M()
         resp.choices[0].message.content = "\n".join(
-            f"{i+1}. {p}_t" for i, p in enumerate(pieces)
+            f"[[SEG{i+1}]] {p}_t" for i, p in enumerate(pieces)
         )
         calls.append(prompt)
         models.append(kwargs.get('model'))
@@ -36,8 +36,8 @@ def test_batch_translate_batches_and_caches(monkeypatch):
     assert result['cs'] == ['Hello_t', 'Hello_t', 'World_t']
     # both unique segments should be sent in one request
     assert len(calls) == 1
-    assert '1. Hello' in calls[0]
-    assert '2. World' in calls[0]
+    assert '[[SEG1]] Hello' in calls[0]
+    assert '[[SEG2]] World' in calls[0]
     assert models == ['gpt-3.5-turbo']
 
 
@@ -48,8 +48,8 @@ def test_async_batch_translate(monkeypatch):
 
     async def fake_create(*args, **kwargs):
         prompt = kwargs['messages'][-1]['content']
-        lines = [l for l in prompt.splitlines() if l.strip() and l.strip()[0].isdigit()]
-        pieces = [l.split('.', 1)[1].strip() if '.' in l else l for l in lines]
+        lines = [l for l in prompt.splitlines() if l.strip().startswith('[[SEG')]
+        pieces = [l.split(']]', 1)[1].strip() for l in lines]
 
         class M:
             pass
@@ -58,7 +58,7 @@ def test_async_batch_translate(monkeypatch):
         resp.choices = [M()]
         resp.choices[0].message = M()
         resp.choices[0].message.content = "\n".join(
-            f"{i+1}. {p}_t" for i, p in enumerate(pieces)
+            f"[[SEG{i+1}]] {p}_t" for i, p in enumerate(pieces)
         )
         calls.append(prompt)
         models.append(kwargs.get('model'))
