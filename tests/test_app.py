@@ -149,4 +149,5 @@ def test_tokens_route_returns_last_value(monkeypatch):
     client = app.test_client()
     resp = client.get('/tokens')
     assert resp.status_code == 200
+
     assert resp.get_json() == {'tokens': 123}
