@@ -32,7 +32,7 @@ class ChatTranslator:
         source_lang: str,
         target_lang: str,
         system_prompt: str | None = None,
-        model: str = "gpt-4",
+        model: str = "gpt-4o",
     ) -> None:
         from_lang = LANGUAGE_MAP.get(source_lang, source_lang)
         to_lang = LANGUAGE_MAP.get(target_lang, target_lang)
@@ -76,7 +76,7 @@ def translate_text(
     source_lang: str,
     target_lang: str,
     system_prompt: str | None = None,
-    model: str = "gpt-4",
+    model: str = "gpt-4o",
 ) -> str:
     """Translate ``text`` from ``source_lang`` to ``target_lang`` using ChatGPT."""
     from_lang = LANGUAGE_MAP.get(source_lang, source_lang)
@@ -142,7 +142,7 @@ def batch_translate(
     *,
     max_tokens: int = 800,
     delay: float | None = 1.0,
-    model: str = "gpt-4",
+    model: str = "gpt-4o",
 ) -> dict[str, list[str]]:
     """Translate ``texts`` into ``target_langs`` using OpenAI in batches."""
 
@@ -205,7 +205,7 @@ async def async_batch_translate(
     *,
     max_tokens: int = 800,
     delay: float | None = None,
-    model: str = "gpt-4",
+    model: str = "gpt-4o",
 ) -> dict[str, list[str]]:
     """Asynchronously translate ``texts`` into ``target_langs`` using OpenAI."""
 
