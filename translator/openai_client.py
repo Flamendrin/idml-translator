@@ -20,37 +20,6 @@ DEFAULT_PROMPT = (
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
-class ChatTranslator:
-    """Maintain conversation context and cache for consistent translations."""
-
-    def __init__(self, source_lang: str, target_lang: str, system_prompt: str | None = None) -> None:
-        from_lang = LANGUAGE_MAP.get(source_lang, source_lang)
-        to_lang = LANGUAGE_MAP.get(target_lang, target_lang)
-        prompt = (system_prompt or DEFAULT_PROMPT).format(from_lang=from_lang, to_lang=to_lang)
-        self.messages: list[ChatCompletionMessageParam] = [
-            {"role": "system", "content": prompt}
-        ]
-        self.cache: dict[str, str] = {}
-
-    def translate(self, text: str) -> str:
-        if text in self.cache:
-            return self.cache[text]
-        self.messages.append({"role": "user", "content": text})
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=self.messages,
-                temperature=0.3,
-            )
-            translation = response.choices[0].message.content.strip()
-            self.messages.append({"role": "assistant", "content": translation})
-            self.cache[text] = translation
-            return translation
-        except Exception as e:  # pragma: no cover - network errors
-            print(f"❌ Chyba při překladu: {e}")
-            return text
-
 LANGUAGE_MAP: dict[str, str] = {}
 if pycountry:
     LANGUAGE_MAP.update(
@@ -101,15 +70,12 @@ def batch_translate(
     after each translation step if provided.
     """
     results = {lang: [] for lang in target_langs}
-    translators = {
-        lang: ChatTranslator(source_lang, lang, system_prompt) for lang in target_langs
-    }
     total = max(1, len(texts) * len(target_langs))
     done = 0
     for text in texts:
-        for lang, translator in translators.items():
+        for lang in target_langs:
             print(f"Překládám z {source_lang} do {lang}: {text[:40]}...")
-            translation = translator.translate(text)
+            translation = translate_text(text, source_lang, lang, system_prompt)
             results[lang].append(translation)
             done += 1
             if progress_callback:
