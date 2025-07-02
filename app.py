@@ -26,9 +26,11 @@ from translator.text_extractor import (
     save_story_xml
 )
 from translator.openai_client import batch_translate, DEFAULT_PROMPT
+from translator.token_estimator import count_tokens, estimate_cost, MODEL_RATES
 import shutil
 import time
 import threading
+import tempfile
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devsecret")
@@ -283,6 +285,34 @@ def index():
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_from_directory(app.config['RESULT_FOLDER'], filename, as_attachment=True)
+
+
+@app.route('/estimate', methods=['POST'])
+def estimate():
+    uploaded_files = request.files.getlist('idml_files')
+    selected_languages = request.form.getlist('languages')
+    model = request.form.get('model', DEFAULT_MODEL)
+
+    if not uploaded_files or any(not f.filename.endswith('.idml') for f in uploaded_files):
+        return jsonify({'error': 'invalid file'}), 400
+
+    texts: list[str] = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for uploaded_file in uploaded_files:
+            fname = secure_filename(uploaded_file.filename)
+            idml_path = os.path.join(tmpdir, fname)
+            uploaded_file.save(idml_path)
+            extract_dir = os.path.join(tmpdir, 'extract')
+            extract_idml(idml_path, extract_dir)
+            for story_path in find_story_files(extract_dir):
+                tree = load_story_xml(story_path)
+                contents = extract_content_elements(tree)
+                for _, txt in contents:
+                    texts.append(txt)
+
+    tokens = count_tokens(texts, model)
+    cost = estimate_cost(tokens, model, len(selected_languages))
+    return jsonify({'tokens': tokens, 'cost': round(cost, 4)})
 
 
 @app.route('/progress/<job_id>')

@@ -253,6 +253,8 @@
       {% endfor %}
     </select>
 
+    <div id="estimate-info" style="margin-top:10px;font-weight:bold;"></div>
+
     <label for="prompt">AI Prompt:</label>
     <textarea name="prompt" rows="4">{{ prompt_text }}</textarea>
 
@@ -316,6 +318,34 @@
     }
   </script>
   {% endif %}
+  <script>
+    async function estimateTokens() {
+      const info = document.getElementById('estimate-info');
+      const fileInput = document.querySelector('input[name="idml_files"]');
+      const modelSelect = document.querySelector('select[name="model"]');
+      const langInputs = document.querySelectorAll('input[name="languages"]:checked');
+      if (!info || !fileInput || !fileInput.files.length || !modelSelect) return;
+      const data = new FormData();
+      for (const f of fileInput.files) data.append('idml_files', f, f.name);
+      langInputs.forEach(el => data.append('languages', el.value));
+      data.append('model', modelSelect.value);
+      try {
+        const res = await fetch('/estimate', { method: 'POST', body: data });
+        if (!res.ok) throw new Error();
+        const json = await res.json();
+        info.textContent = `Odhad: ${json.tokens} tokenů, cena přibližně $${json.cost.toFixed(4)}`;
+      } catch (e) {
+        info.textContent = '';
+      }
+    }
+    window.addEventListener('DOMContentLoaded', () => {
+      const fileInput = document.querySelector('input[name="idml_files"]');
+      const modelSelect = document.querySelector('select[name="model"]');
+      document.querySelectorAll('input[name="languages"]').forEach(el => el.addEventListener('change', estimateTokens));
+      if (fileInput) fileInput.addEventListener('change', estimateTokens);
+      if (modelSelect) modelSelect.addEventListener('change', estimateTokens);
+    });
+  </script>
   <script>
     async function loadTranslations() {
       const list = document.getElementById('translation-list');
