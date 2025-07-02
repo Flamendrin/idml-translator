@@ -102,7 +102,7 @@ def test_index_passes_selected_model(monkeypatch, tmp_path):
 
 
 def test_estimate_route(monkeypatch, tmp_path):
-    monkeypatch.setattr(app_module, 'estimate_total_tokens', lambda texts, model: 1000)
+    monkeypatch.setattr(app_module, 'estimate_total_tokens', lambda texts, model, languages: 1000)
     idml_path = tmp_path / 'e.idml'
     _create_idml(idml_path)
     client = app.test_client()
@@ -114,14 +114,14 @@ def test_estimate_route(monkeypatch, tmp_path):
     resp = client.post('/estimate', data=data, content_type='multipart/form-data')
     assert resp.status_code == 200
     result = resp.get_json()
-    expected = round(token_estimator.estimate_cost(1000, 'gpt-4o', 2), 4)
+    expected = round(token_estimator.estimate_cost(1000, 'gpt-4o'), 4)
     assert result == {'tokens': 1000, 'cost': expected}
 
 
 def test_estimate_deduplicates_texts(monkeypatch, tmp_path):
     captured = {}
 
-    def fake_est(texts, model):
+    def fake_est(texts, model, languages):
         captured['texts'] = texts
         return len(texts)
 
@@ -139,7 +139,7 @@ def test_estimate_deduplicates_texts(monkeypatch, tmp_path):
     resp = client.post('/estimate', data=data, content_type='multipart/form-data')
     assert resp.status_code == 200
     result = resp.get_json()
-    expected = round(token_estimator.estimate_cost(len(captured['texts']), 'gpt-4o', 1), 4)
+    expected = round(token_estimator.estimate_cost(len(captured['texts']), 'gpt-4o'), 4)
     assert captured['texts'] == ['Hi']
     assert result == {'tokens': len(captured['texts']), 'cost': expected}
 

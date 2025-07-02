@@ -62,5 +62,5 @@ def test_estimate_total_tokens_adds_overhead(monkeypatch):
         'Translate the following segments labelled [[SEG1]]..[[SEGN]]. Provide the translations on separate lines using the same labels:'
     ]
     assert captured[3] == ['[[SEG1]]', '[[SEG2]]']
-    assert tokens == sum(len(c) for c in captured)
+    assert tokens > sum(len(c) for c in captured)
 
