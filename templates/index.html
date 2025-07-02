@@ -259,10 +259,10 @@
     <button type="submit">Nahrát a přeložit</button>
   </form>
 
-  {% if completed_jobs %}
   <div class="results">
     <h2>✅ Dostupné překlady</h2>
-    <ul>
+    <div id="translations-loading" style="display:none">Načítám...</div>
+    <ul id="translation-list">
       {% for j in completed_jobs %}
       <div class="job">
         <div class="job-header">
@@ -283,7 +283,6 @@
       {% endfor %}
     </ul>
   </div>
-  {% endif %}
 
   <div class="footer">
     &copy; 2025 IDML Translator – powered by Unicorns & Magic
@@ -310,6 +309,48 @@
     }
   </script>
   {% endif %}
+  <script>
+    async function loadTranslations() {
+      const list = document.getElementById('translation-list');
+      const loading = document.getElementById('translations-loading');
+      if (!list || !loading) return;
+      loading.style.display = 'block';
+      try {
+        const res = await fetch('/translations');
+        if (!res.ok) throw new Error();
+        const jobs = await res.json();
+        list.innerHTML = '';
+        for (const job of jobs) {
+          const jobDiv = document.createElement('div');
+          jobDiv.className = 'job';
+          const header = document.createElement('div');
+          header.className = 'job-header';
+          header.innerHTML = `<span>${new Date(job.timestamp * 1000).toISOString().slice(0,16).replace('T',' ')}</span>`;
+          const removeForm = document.createElement('form');
+          removeForm.method = 'post';
+          removeForm.action = `/remove/${job.id}`;
+          removeForm.className = 'remove-form';
+          removeForm.innerHTML = '<button class="remove-btn" type="submit" title="Smazat">❌</button>';
+          jobDiv.appendChild(header);
+          jobDiv.appendChild(removeForm);
+          const ul = document.createElement('ul');
+          ul.className = 'job-files';
+          for (const [lang, url, fname] of job.links) {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${lang} (${fname}):</strong> <a class="download-link" href="${url}">Stáhnout</a>`;
+            ul.appendChild(li);
+          }
+          jobDiv.appendChild(ul);
+          list.appendChild(jobDiv);
+        }
+      } catch (err) {
+        alert('Nepodařilo se načíst dostupné překlady.');
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+    window.addEventListener('DOMContentLoaded', loadTranslations);
+  </script>
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const results = document.querySelector('.results');
