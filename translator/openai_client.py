@@ -27,6 +27,8 @@ async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 class ChatTranslator:
     """Maintain conversation context and cache for consistent translations."""
 
+    HISTORY_LIMIT = 6  # keep at most this many recent messages besides system
+
     def __init__(
         self,
         source_lang: str,
@@ -55,6 +57,8 @@ class ChatTranslator:
             )
             translation = response.choices[0].message.content.strip()
             self.messages.append({"role": "assistant", "content": translation})
+            if len(self.messages) > self.HISTORY_LIMIT + 1:
+                self.messages = [self.messages[0]] + self.messages[-self.HISTORY_LIMIT:]
             self.cache[text] = translation
             return translation
         except Exception as e:  # pragma: no cover - network errors
@@ -177,6 +181,8 @@ def batch_translate(
                 )
                 reply = response.choices[0].message.content.strip()
                 translator.messages.append({"role": "assistant", "content": reply})
+                if len(translator.messages) > ChatTranslator.HISTORY_LIMIT + 1:
+                    translator.messages = [translator.messages[0]] + translator.messages[-ChatTranslator.HISTORY_LIMIT:]
             except Exception as e:  # pragma: no cover - network errors
                 print(f"❌ Chyba při překladu: {e}")
                 reply = "\n".join(batch)
@@ -240,6 +246,8 @@ async def async_batch_translate(
             )
             reply = response.choices[0].message.content.strip()
             translator.messages.append({"role": "assistant", "content": reply})
+            if len(translator.messages) > ChatTranslator.HISTORY_LIMIT + 1:
+                translator.messages = [translator.messages[0]] + translator.messages[-ChatTranslator.HISTORY_LIMIT:]
         except Exception as e:  # pragma: no cover - network errors
             print(f"❌ Chyba při překladu: {e}")
             reply = "\n".join(batch)

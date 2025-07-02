@@ -26,7 +26,12 @@ from translator.text_extractor import (
     save_story_xml
 )
 from translator.openai_client import batch_translate, DEFAULT_PROMPT
-from translator.token_estimator import count_tokens, estimate_cost, MODEL_RATES
+from translator.token_estimator import (
+    count_tokens,
+    estimate_cost,
+    MODEL_RATES,
+    estimate_total_tokens,
+)
 import shutil
 import time
 import threading
@@ -311,7 +316,7 @@ def estimate():
                     texts.append(txt)
 
     texts = list(dict.fromkeys(texts))
-    tokens = count_tokens(texts, model)
+    tokens = estimate_total_tokens(texts, model)
     cost = estimate_cost(tokens, model, len(selected_languages))
     return jsonify({'tokens': tokens, 'cost': round(cost, 4)})
 
