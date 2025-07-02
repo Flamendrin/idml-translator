@@ -23,7 +23,8 @@ endpoint and ``translator/token_estimator.py`` helper.
 
 ## Tests
 
-Run tests with:
+Install test dependencies and run the suite with:
 ```bash
+pip install -r requirements.txt
 pytest
 ```

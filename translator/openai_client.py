@@ -25,7 +25,13 @@ async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 class ChatTranslator:
-    """Maintain conversation context and cache for consistent translations."""
+    """Helper for incremental translations using a conversational model.
+
+    The class keeps track of the conversation history and caches already
+    translated segments so that repeated strings are only sent once to the
+    API.  Only a limited number of the most recent messages are kept to avoid
+    unbounded growth of the message history.
+    """
 
     HISTORY_LIMIT = 6  # keep at most this many recent messages besides system
 
@@ -36,18 +42,29 @@ class ChatTranslator:
         system_prompt: str | None = None,
         model: str = "gpt-4o",
     ) -> None:
+        """Create a translator between ``source_lang`` and ``target_lang``.
+
+        Parameters mirror those accepted by :func:`translate_text` with the
+        addition of ``model`` specifying the chat model to use.  ``system_prompt``
+        may be customised to influence the style of the translation.
+        """
+
         from_lang = LANGUAGE_MAP.get(source_lang, source_lang)
         to_lang = LANGUAGE_MAP.get(target_lang, target_lang)
-        prompt = (system_prompt or DEFAULT_PROMPT).format(from_lang=from_lang, to_lang=to_lang)
-        self.messages: list[ChatCompletionMessageParam] = [
-            {"role": "system", "content": prompt}
-        ]
+        prompt = (system_prompt or DEFAULT_PROMPT).format(
+            from_lang=from_lang,
+            to_lang=to_lang,
+        )
+        self.messages: list[ChatCompletionMessageParam] = [{"role": "system", "content": prompt}]
         self.cache: dict[str, str] = {}
         self.model = model
 
     def translate(self, text: str) -> str:
+        """Translate ``text`` and return the translated string."""
+
         if text in self.cache:
             return self.cache[text]
+
         self.messages.append({"role": "user", "content": text})
         try:
             response = client.chat.completions.create(
@@ -104,7 +121,7 @@ def translate_text(
         return text
 
 def _split_batches(texts: list[str], max_tokens: int, model: str) -> list[list[str]]:
-    """Split ``texts`` into batches not exceeding ``max_tokens`` tokens."""
+    """Split ``texts`` so each batch stays within the ``max_tokens`` limit."""
     batches: list[list[str]] = []
     current: list[str] = []
     tokens = 0
@@ -122,7 +139,7 @@ def _split_batches(texts: list[str], max_tokens: int, model: str) -> list[list[s
 
 
 def _parse_segments(translated: str) -> list[str]:
-    """Parse ``translated`` text labelled with ``[[SEG#]]`` markers."""
+    """Return the ordered list of segments from a marked-up translation."""
     import re
 
     pattern = re.compile(r"\[\[SEG(\d+)\]\]")
@@ -213,7 +230,12 @@ async def async_batch_translate(
     delay: float | None = None,
     model: str = "gpt-4o",
 ) -> dict[str, list[str]]:
-    """Asynchronously translate ``texts`` into ``target_langs`` using OpenAI."""
+    """Asynchronously translate ``texts`` into ``target_langs`` using OpenAI.
+
+    The function mirrors :func:`batch_translate` but performs requests
+    concurrently using the asynchronous OpenAI client.  It returns the same
+    dictionary mapping language codes to the list of translated segments.
+    """
 
     results = {lang: [] for lang in target_langs}
     translators = {

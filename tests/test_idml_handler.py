@@ -1,7 +1,12 @@
 import zipfile
 import pytest
 
-from translator.idml_handler import extract_idml, ExtractionError
+from translator.idml_handler import (
+    extract_idml,
+    ExtractionError,
+    repackage_idml,
+    copy_unpacked_dir,
+)
 
 
 def create_zip(files, path):
@@ -26,4 +31,26 @@ def test_extract_idml_prevents_path_traversal(tmp_path):
 
     with pytest.raises(ExtractionError):
         extract_idml(zip_path, tmp_path / "out")
+
+
+def test_repackage_idml_roundtrip(tmp_path):
+    src = tmp_path / "src"
+    (src / "Stories").mkdir(parents=True)
+    (src / "Stories" / "story.xml").write_text("<Root/>")
+    out = tmp_path / "out.idml"
+    repackage_idml(src, out)
+    assert zipfile.is_zipfile(out)
+    with zipfile.ZipFile(out) as zf:
+        assert "Stories/story.xml" in zf.namelist()
+
+
+def test_copy_unpacked_dir_overwrites(tmp_path):
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "a.txt").write_text("ok")
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    (dest / "a.txt").write_text("old")
+    copy_unpacked_dir(src, dest)
+    assert (dest / "a.txt").read_text() == "ok"
 
