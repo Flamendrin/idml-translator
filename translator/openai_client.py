@@ -8,6 +8,7 @@ import asyncio
 from openai import OpenAI, AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from translator.token_estimator import count_tokens
+import httpx
 
 try:
     import pycountry  # type: ignore
@@ -23,6 +24,24 @@ DEFAULT_PROMPT = (
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+def get_remaining_credit() -> float | None:
+    """Return remaining credit for the configured OpenAI API key."""
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    headers = {"Authorization": f"Bearer {api_key}"}
+    url = "https://api.openai.com/dashboard/billing/credit_grants"
+    try:  # pragma: no cover - network errors
+        with httpx.Client(timeout=5.0) as http:
+            resp = http.get(url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception:  # pragma: no cover - network errors
+        return None
+    return data.get("total_available")
 
 
 class ChatTranslator:

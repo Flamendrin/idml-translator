@@ -142,3 +142,11 @@ def test_estimate_deduplicates_texts(monkeypatch, tmp_path):
     expected = round(token_estimator.estimate_cost(len(captured['texts']), 'gpt-4o', 1), 4)
     assert captured['texts'] == ['Hi']
     assert result == {'tokens': len(captured['texts']), 'cost': expected}
+
+
+def test_credit_route(monkeypatch):
+    monkeypatch.setattr(app_module, 'get_remaining_credit', lambda: 42.0)
+    client = app.test_client()
+    resp = client.get('/credit')
+    assert resp.status_code == 200
+    assert resp.get_json() == {'credit': 42.0}

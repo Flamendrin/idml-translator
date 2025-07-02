@@ -86,3 +86,31 @@ def test_parse_segments_preserves_spaces():
     translated = "[[SEG1]]  Hello \n[[SEG2]]  World  "
     result = openai_client._parse_segments(translated)
     assert result == [' Hello ', ' World  ']
+
+
+def test_get_remaining_credit(monkeypatch):
+    class DummyResp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"total_available": 1.23}
+
+    class DummyClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            pass
+
+        def get(self, url, headers=None):
+            assert url == "https://api.openai.com/dashboard/billing/credit_grants"
+            assert headers["Authorization"] == "Bearer test"
+            return DummyResp()
+
+    monkeypatch.setattr(openai_client.httpx, "Client", DummyClient)
+    os.environ["OPENAI_API_KEY"] = "test"
+    assert openai_client.get_remaining_credit() == 1.23
