@@ -88,32 +88,102 @@ def translate_text(
         print(f"❌ Chyba při překladu: {e}")
         return text
 
+def _split_batches(texts: list[str], max_tokens: int) -> list[list[str]]:
+    """Split ``texts`` into batches not exceeding ``max_tokens`` words."""
+    batches: list[list[str]] = []
+    current: list[str] = []
+    tokens = 0
+    for text in texts:
+        count = len(text.split())
+        if current and tokens + count > max_tokens:
+            batches.append(current)
+            current = []
+            tokens = 0
+        current.append(text)
+        tokens += count
+    if current:
+        batches.append(current)
+    return batches
+
+
+def _parse_numbered(translated: str) -> list[str]:
+    """Parse numbered translation output into a list of texts."""
+    lines = [line.strip() for line in translated.splitlines() if line.strip()]
+    results: list[str] = []
+    for line in lines:
+        if line[0].isdigit():
+            # remove leading number + punctuation
+            parts = line.split(".", 1)
+            if len(parts) == 2 and parts[0].strip().isdigit():
+                results.append(parts[1].strip())
+            else:
+                parts = line.split(" ", 1)
+                if len(parts) == 2 and parts[0].strip().isdigit():
+                    results.append(parts[1].strip())
+                else:
+                    results.append(line)
+        elif results:
+            # continuation of previous line
+            results[-1] += " " + line
+    return results
+
+
 def batch_translate(
     texts: list[str],
     target_langs: list[str],
     source_lang: str,
     system_prompt: str | None = None,
     progress_callback: callable | None = None,
+    *,
+    max_tokens: int = 800,
 ) -> dict[str, list[str]]:
-    """Translate a list of texts into multiple languages sequentially.
+    """Translate ``texts`` into ``target_langs`` using OpenAI in batches."""
 
-    ``progress_callback`` will be called with the percentage completed (0-100)
-    after each translation step if provided.
-    """
     results = {lang: [] for lang in target_langs}
     translators = {
         lang: ChatTranslator(source_lang, lang, system_prompt) for lang in target_langs
     }
+
+    counts: dict[str, int] = {}
+    for t in texts:
+        counts[t] = counts.get(t, 0) + 1
+
     total = max(1, len(texts) * len(target_langs))
     done = 0
+
+    unique_texts = list(dict.fromkeys(texts))
+
+    for lang, translator in translators.items():
+        to_translate = [t for t in unique_texts if t not in translator.cache]
+        for batch in _split_batches(to_translate, max_tokens):
+            numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
+            prompt = (
+                f"Translate the following pieces numbered 1..{len(batch)}. "
+                "Provide the translations in the same numbered order:\n" + numbered
+            )
+            translator.messages.append({"role": "user", "content": prompt})
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=translator.messages,
+                    temperature=0.3,
+                )
+                reply = response.choices[0].message.content.strip()
+                translator.messages.append({"role": "assistant", "content": reply})
+            except Exception as e:  # pragma: no cover - network errors
+                print(f"❌ Chyba při překladu: {e}")
+                reply = "\n".join(batch)
+
+            translations = _parse_numbered(reply)
+            for original, translated in zip(batch, translations):
+                translator.cache[original] = translated
+                done += counts.get(original, 1)
+                if progress_callback:
+                    progress_callback(int(done / total * 100))
+            time.sleep(1)
+
     for text in texts:
         for lang, translator in translators.items():
-            print(f"Překládám z {source_lang} do {lang}: {text[:40]}...")
-            translation = translator.translate(text)
-            results[lang].append(translation)
-            done += 1
-            if progress_callback:
-                progress_callback(int(done / total * 100))
-            time.sleep(1)
+            results[lang].append(translator.cache.get(text, text))
     return results
 
