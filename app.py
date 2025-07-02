@@ -153,7 +153,7 @@ def _run_translation_job(
             tree = load_story_xml(story_path)
             contents = extract_content_elements(tree)
             all_contents.append((story_path, tree, contents))
-            for _, text in contents:
+            for _, text, _ in contents:
                 all_texts.append(text)
 
         def _progress(pct: int) -> None:
@@ -307,7 +307,7 @@ def estimate():
             for story_path in find_story_files(extract_dir):
                 tree = load_story_xml(story_path)
                 contents = extract_content_elements(tree)
-                for _, txt in contents:
+                for _, txt, _ in contents:
                     texts.append(txt)
 
     texts = list(dict.fromkeys(texts))
