@@ -26,7 +26,13 @@ async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 class ChatTranslator:
     """Maintain conversation context and cache for consistent translations."""
 
-    def __init__(self, source_lang: str, target_lang: str, system_prompt: str | None = None) -> None:
+    def __init__(
+        self,
+        source_lang: str,
+        target_lang: str,
+        system_prompt: str | None = None,
+        model: str = "gpt-4",
+    ) -> None:
         from_lang = LANGUAGE_MAP.get(source_lang, source_lang)
         to_lang = LANGUAGE_MAP.get(target_lang, target_lang)
         prompt = (system_prompt or DEFAULT_PROMPT).format(from_lang=from_lang, to_lang=to_lang)
@@ -34,6 +40,7 @@ class ChatTranslator:
             {"role": "system", "content": prompt}
         ]
         self.cache: dict[str, str] = {}
+        self.model = model
 
     def translate(self, text: str) -> str:
         if text in self.cache:
@@ -41,7 +48,7 @@ class ChatTranslator:
         self.messages.append({"role": "user", "content": text})
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
+                model=self.model,
                 messages=self.messages,
                 temperature=0.3,
             )
@@ -68,6 +75,7 @@ def translate_text(
     source_lang: str,
     target_lang: str,
     system_prompt: str | None = None,
+    model: str = "gpt-4",
 ) -> str:
     """Translate ``text`` from ``source_lang`` to ``target_lang`` using ChatGPT."""
     from_lang = LANGUAGE_MAP.get(source_lang, source_lang)
@@ -81,7 +89,7 @@ def translate_text(
     ]
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model=model,
             messages=messages,
             temperature=0.3,
         )
@@ -139,12 +147,13 @@ def batch_translate(
     *,
     max_tokens: int = 800,
     delay: float | None = 1.0,
+    model: str = "gpt-4",
 ) -> dict[str, list[str]]:
     """Translate ``texts`` into ``target_langs`` using OpenAI in batches."""
 
     results = {lang: [] for lang in target_langs}
     translators = {
-        lang: ChatTranslator(source_lang, lang, system_prompt) for lang in target_langs
+        lang: ChatTranslator(source_lang, lang, system_prompt, model) for lang in target_langs
     }
 
     counts: dict[str, int] = {}
@@ -167,7 +176,7 @@ def batch_translate(
             translator.messages.append({"role": "user", "content": prompt})
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model=model,
                     messages=translator.messages,
                     temperature=0.3,
                 )
@@ -201,12 +210,13 @@ async def async_batch_translate(
     *,
     max_tokens: int = 800,
     delay: float | None = None,
+    model: str = "gpt-4",
 ) -> dict[str, list[str]]:
     """Asynchronously translate ``texts`` into ``target_langs`` using OpenAI."""
 
     results = {lang: [] for lang in target_langs}
     translators = {
-        lang: ChatTranslator(source_lang, lang, system_prompt) for lang in target_langs
+        lang: ChatTranslator(source_lang, lang, system_prompt, model) for lang in target_langs
     }
 
     counts: dict[str, int] = {}
@@ -229,7 +239,7 @@ async def async_batch_translate(
         translator.messages.append({"role": "user", "content": prompt})
         try:
             response = await async_client.chat.completions.create(
-                model="gpt-4",
+                model=model,
                 messages=translator.messages,
                 temperature=0.3,
             )

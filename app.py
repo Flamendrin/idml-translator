@@ -33,6 +33,7 @@ import threading
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devsecret")
 PASSWORD = os.environ.get("APP_PASSWORD", "banana")
+DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['RESULT_FOLDER'] = 'results'
 
@@ -127,6 +128,7 @@ def _run_translation_job(
     selected_languages: list[str],
     source_lang: str,
     system_prompt: str | None,
+    model: str,
 ) -> None:
     links: list[tuple[str, str, str]] = []  # (lang, url, filename)
     total_steps = 0
@@ -161,6 +163,7 @@ def _run_translation_job(
             source_lang,
             system_prompt,
             progress_callback=_progress,
+            model=model,
         )
 
         for lang in selected_languages:
@@ -221,9 +224,10 @@ def index():
         selected_languages = request.form.getlist('languages')
         source_lang = request.form.get('source_lang')
         system_prompt = request.form.get('prompt', '').strip() or None
+        selected_model = request.form.get('model', DEFAULT_MODEL)
 
         if not uploaded_files or any(not f.filename.endswith('.idml') for f in uploaded_files):
-            return render_template('index.html', error="❌ Prosím nahraj platný .idml soubor.")
+            return render_template('index.html', error="❌ Prosím nahraj platný .idml soubor.", selected_model=selected_model)
 
         if source_lang in selected_languages:
             selected_languages.remove(source_lang)
@@ -241,7 +245,7 @@ def index():
 
         thread = threading.Thread(
             target=_run_translation_job,
-            args=(job_id, file_info, selected_languages, source_lang, system_prompt),
+            args=(job_id, file_info, selected_languages, source_lang, system_prompt, selected_model),
             daemon=True,
         )
         thread.start()
@@ -252,6 +256,7 @@ def index():
             prompt_text=system_prompt or DEFAULT_PROMPT,
             completed_jobs=completed_jobs,
             lang_names=LANGUAGE_NAMES,
+            selected_model=selected_model,
         )
 
     job_id = request.args.get('job')
@@ -264,6 +269,7 @@ def index():
                 prompt_text=info.get('prompt', DEFAULT_PROMPT),
                 completed_jobs=completed_jobs,
                 lang_names=LANGUAGE_NAMES,
+                selected_model=DEFAULT_MODEL,
             )
 
     return render_template(
@@ -271,6 +277,7 @@ def index():
         prompt_text=DEFAULT_PROMPT,
         completed_jobs=completed_jobs,
         lang_names=LANGUAGE_NAMES,
+        selected_model=DEFAULT_MODEL,
     )
 
 @app.route('/download/<filename>')
