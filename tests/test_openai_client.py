@@ -9,6 +9,8 @@ from translator import openai_client
 def test_batch_translate_batches_and_caches(monkeypatch):
     calls = []
 
+    models = []
+
     def fake_create(*args, **kwargs):
         prompt = kwargs['messages'][-1]['content']
         lines = [l for l in prompt.splitlines() if l.strip() and l.strip()[0].isdigit()]
@@ -24,21 +26,25 @@ def test_batch_translate_batches_and_caches(monkeypatch):
             f"{i+1}. {p}_t" for i, p in enumerate(pieces)
         )
         calls.append(prompt)
+        models.append(kwargs.get('model'))
         return resp
 
     monkeypatch.setattr(openai_client.client.chat.completions, 'create', fake_create)
 
     texts = ['Hello', 'Hello', 'World']
-    result = openai_client.batch_translate(texts, ['cs'], 'en')
+    result = openai_client.batch_translate(texts, ['cs'], 'en', model='gpt-3.5-turbo')
     assert result['cs'] == ['Hello_t', 'Hello_t', 'World_t']
     # both unique segments should be sent in one request
     assert len(calls) == 1
     assert '1. Hello' in calls[0]
     assert '2. World' in calls[0]
+    assert models == ['gpt-3.5-turbo']
 
 
 def test_async_batch_translate(monkeypatch):
     calls = []
+
+    models = []
 
     async def fake_create(*args, **kwargs):
         prompt = kwargs['messages'][-1]['content']
@@ -55,12 +61,14 @@ def test_async_batch_translate(monkeypatch):
             f"{i+1}. {p}_t" for i, p in enumerate(pieces)
         )
         calls.append(prompt)
+        models.append(kwargs.get('model'))
         return resp
 
     monkeypatch.setattr(openai_client.async_client.chat.completions, 'create', fake_create)
 
     texts = ['Hi', 'Bye']
-    result = asyncio.run(openai_client.async_batch_translate(texts, ['cs', 'de'], 'en', delay=None))
+    result = asyncio.run(openai_client.async_batch_translate(texts, ['cs', 'de'], 'en', delay=None, model='gpt-3.5-turbo'))
     assert result['cs'] == ['Hi_t', 'Bye_t']
     assert result['de'] == ['Hi_t', 'Bye_t']
     assert len(calls) == 2
+    assert models == ['gpt-3.5-turbo', 'gpt-3.5-turbo']

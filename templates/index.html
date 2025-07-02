@@ -246,6 +246,13 @@
       <label class="tag"><input type="checkbox" name="languages" value="hu"><span>Maďarština</span></label>
     </div>
 
+    <label for="model">Model:</label>
+    <select name="model">
+      {% for m in ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o'] %}
+      <option value="{{ m }}" {% if selected_model == m %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+
     <label for="prompt">AI Prompt:</label>
     <textarea name="prompt" rows="4">{{ prompt_text }}</textarea>
 
