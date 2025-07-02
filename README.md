@@ -16,10 +16,9 @@ A simple Flask application for translating IDML (InDesign Markup Language) files
 
 The web UI includes a drop-down to select the chat model for each translation job.
 
-The app can also show the remaining credit for your OpenAI API key via the
-``/credit`` endpoint which the front-end displays under the model selector.
-If the API key is missing or the credit endpoint cannot be reached the page
-will show ``Zbývající kredit není dostupný`` instead.
+The app tracks how many OpenAI tokens were consumed by the most recent
+translation job. This is exposed via the ``/tokens`` endpoint and shown under
+the model selector on the main page.
 
 When IDML files and target languages are selected the page now displays an
 estimate of the number of tokens that will be sent to the OpenAI API along with
