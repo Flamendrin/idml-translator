@@ -310,6 +310,7 @@ def estimate():
                 for _, txt in contents:
                     texts.append(txt)
 
+    texts = list(dict.fromkeys(texts))
     tokens = count_tokens(texts, model)
     cost = estimate_cost(tokens, model, len(selected_languages))
     return jsonify({'tokens': tokens, 'cost': round(cost, 4)})

@@ -62,6 +62,15 @@ def _create_idml(path: str) -> None:
         zf.writestr('Stories/story.xml', '<Root><Content>Hello</Content></Root>')
 
 
+def _create_idml_duplicate(path: str) -> None:
+    with zipfile.ZipFile(path, 'w') as zf:
+        zf.writestr('mimetype', '')
+        zf.writestr(
+            'Stories/story.xml',
+            '<Root><Content>Hi</Content><Content>Hi</Content></Root>'
+        )
+
+
 def test_index_passes_selected_model(monkeypatch, tmp_path):
     called = {}
 
@@ -107,3 +116,29 @@ def test_estimate_route(monkeypatch, tmp_path):
     result = resp.get_json()
     expected = round(token_estimator.estimate_cost(1000, 'gpt-4o', 2), 4)
     assert result == {'tokens': 1000, 'cost': expected}
+
+
+def test_estimate_deduplicates_texts(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_count(texts, model):
+        captured['texts'] = texts
+        return len(texts)
+
+    monkeypatch.setattr(app_module, 'count_tokens', fake_count)
+
+    idml_path = tmp_path / 'dup.idml'
+    _create_idml_duplicate(idml_path)
+
+    client = app.test_client()
+    data = {
+        'idml_files': [(open(idml_path, 'rb'), 'dup.idml')],
+        'languages': ['cs'],
+        'model': 'gpt-4o',
+    }
+    resp = client.post('/estimate', data=data, content_type='multipart/form-data')
+    assert resp.status_code == 200
+    result = resp.get_json()
+    expected = round(token_estimator.estimate_cost(len(captured['texts']), 'gpt-4o', 1), 4)
+    assert captured['texts'] == ['Hi']
+    assert result == {'tokens': len(captured['texts']), 'cost': expected}
