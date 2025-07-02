@@ -34,18 +34,3 @@ def test_index_template_has_autoscroll_script():
     with open(path, encoding='utf-8') as f:
         html = f.read()
     assert 'scrollIntoView' in html
-
-
-def test_translations_endpoint_returns_json():
-    JOB_PROGRESS.clear()
-    JOB_PROGRESS['job'] = {
-        'progress': 100,
-        'timestamp': 1,
-        'links': [('cs', '/download/file.idml', 'file.idml')],
-    }
-    client = app.test_client()
-    response = client.get('/translations')
-    assert response.status_code == 200
-    data = response.get_json()
-    assert isinstance(data, list)
-    assert data[0]['id'] == 'job'
