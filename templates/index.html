@@ -150,10 +150,10 @@
         if (json.credit !== null && json.credit !== undefined) {
           info.textContent = `Zbývající kredit: $${json.credit.toFixed(4)}`;
         } else {
-          info.textContent = '';
+          info.textContent = 'Zbývající kredit není dostupný.';
         }
       } catch (e) {
-        info.textContent = '';
+        info.textContent = 'Zbývající kredit není dostupný.';
       }
     }
   </script>

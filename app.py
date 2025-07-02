@@ -334,7 +334,12 @@ def estimate():
 @app.route('/credit')
 def credit():
     """Return remaining credit for the configured API key."""
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        return jsonify({'credit': None, 'error': 'unavailable'})
     value = get_remaining_credit()
+    if value is None:
+        return jsonify({'credit': None, 'error': 'unavailable'})
     return jsonify({'credit': value})
 
 
