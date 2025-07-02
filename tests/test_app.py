@@ -102,7 +102,7 @@ def test_index_passes_selected_model(monkeypatch, tmp_path):
 
 
 def test_estimate_route(monkeypatch, tmp_path):
-    monkeypatch.setattr(app_module, 'count_tokens', lambda texts, model: 1000)
+    monkeypatch.setattr(app_module, 'estimate_total_tokens', lambda texts, model: 1000)
     idml_path = tmp_path / 'e.idml'
     _create_idml(idml_path)
     client = app.test_client()
@@ -121,11 +121,11 @@ def test_estimate_route(monkeypatch, tmp_path):
 def test_estimate_deduplicates_texts(monkeypatch, tmp_path):
     captured = {}
 
-    def fake_count(texts, model):
+    def fake_est(texts, model):
         captured['texts'] = texts
         return len(texts)
 
-    monkeypatch.setattr(app_module, 'count_tokens', fake_count)
+    monkeypatch.setattr(app_module, 'estimate_total_tokens', fake_est)
 
     idml_path = tmp_path / 'dup.idml'
     _create_idml_duplicate(idml_path)

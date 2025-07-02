@@ -11,6 +11,14 @@ MODEL_RATES: dict[str, float] = {
     "gpt-4o": 0.005,
 }
 
+# Same default system prompt used in the translator client. Duplicated here to
+# avoid cross-module imports.
+DEFAULT_SYSTEM_PROMPT = (
+    "You are a professional translator. "
+    "Translate the following XML-safe text from {from_lang} to {to_lang}. "
+    "Do not change XML tags."
+)
+
 
 def count_tokens(texts: list[str], model: str) -> int:
     """Return the total number of tokens for ``texts`` using ``model`` encoding."""
@@ -30,4 +38,25 @@ def estimate_cost(tokens: int, model: str, languages: int = 1) -> float:
     """Return estimated price for ``tokens`` for ``languages`` translations."""
     rate = MODEL_RATES.get(model, 0.03)
     return (tokens / 1000) * rate * languages
+
+
+def estimate_total_tokens(
+    texts: list[str],
+    model: str,
+    system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+) -> int:
+    """Return a rough estimate of tokens sent for translating ``texts``."""
+    unique = list(dict.fromkeys(texts))
+    tokens = count_tokens(unique, model)
+    tokens += count_tokens([system_prompt], model)
+    tokens += count_tokens(
+        [
+            "Translate the following segments labelled [[SEG1]]..[[SEGN]]. "
+            "Provide the translations on separate lines using the same labels:"
+        ],
+        model,
+    )
+    markers = [f"[[SEG{i+1}]]" for i in range(len(unique))]
+    tokens += count_tokens(markers, model)
+    return tokens
 
