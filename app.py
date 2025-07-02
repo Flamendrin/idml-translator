@@ -35,7 +35,7 @@ import tempfile
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devsecret")
 PASSWORD = os.environ.get("APP_PASSWORD", "banana")
-DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
+DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['RESULT_FOLDER'] = 'results'
 

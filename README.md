@@ -8,7 +8,7 @@ A simple Flask application for translating IDML (InDesign Markup Language) files
    ```bash
    pip install -r requirements.txt
    ```
-2. Set the environment variables `OPENAI_API_KEY`, and optionally `FLASK_SECRET_KEY`, `APP_PASSWORD` and `OPENAI_MODEL` (default `gpt-4`).
+2. Set the environment variables `OPENAI_API_KEY`, and optionally `FLASK_SECRET_KEY`, `APP_PASSWORD` and `OPENAI_MODEL` (default `gpt-4o`).
 3. Run the app:
    ```bash
    python app.py
