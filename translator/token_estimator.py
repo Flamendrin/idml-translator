@@ -16,7 +16,8 @@ MODEL_RATES: dict[str, float] = {
 DEFAULT_SYSTEM_PROMPT = (
     "You are a professional translator. "
     "Translate the following XML-safe text from {from_lang} to {to_lang}. "
-    "Do not change XML tags."
+    "Do not change XML tags. "
+    "Preserve all whitespace including spaces and line breaks."
 )
 
 

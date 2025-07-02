@@ -80,3 +80,9 @@ def test_split_batches_respects_tokens(monkeypatch):
     texts = ['aaaaa', 'bb', 'ccc']
     batches = openai_client._split_batches(texts, 5, 'gpt-3.5-turbo')
     assert batches == [['aaaaa'], ['bb', 'ccc']]
+
+
+def test_parse_segments_preserves_spaces():
+    translated = "[[SEG1]]  Hello \n[[SEG2]]  World  "
+    result = openai_client._parse_segments(translated)
+    assert result == [' Hello ', ' World  ']
