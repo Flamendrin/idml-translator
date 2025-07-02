@@ -117,19 +117,19 @@ def _split_batches(texts: list[str], max_tokens: int, model: str) -> list[list[s
     return batches
 
 
-def _parse_numbered(translated: str) -> list[str]:
-    """Parse numbered translation output into a list of texts."""
+def _parse_segments(translated: str) -> list[str]:
+    """Parse ``translated`` text labelled with ``[[SEG#]]`` markers."""
     import re
 
-    lines = [line for line in translated.splitlines() if line.strip()]
+    pattern = re.compile(r"\[\[SEG(\d+)\]\]")
+    parts = pattern.split(translated)
     results: list[str] = []
-    pattern = re.compile(r"^\s*\d+\W*\s*(.*)$")
-    for line in lines:
-        match = pattern.match(line)
-        if match:
-            results.append(match.group(1))
-        elif results:
-            results[-1] += " " + line.strip()
+    i = 1
+    while i < len(parts):
+        _num = parts[i]
+        text = parts[i + 1].strip()
+        results.append(text)
+        i += 2
     return results
 
 
@@ -163,10 +163,10 @@ def batch_translate(
     for lang, translator in translators.items():
         to_translate = [t for t in unique_texts if t not in translator.cache]
         for batch in _split_batches(to_translate, max_tokens, model):
-            numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
+            marked = "\n".join(f"[[SEG{i+1}]] {t}" for i, t in enumerate(batch))
             prompt = (
-                f"Translate the following pieces numbered 1..{len(batch)}. "
-                "Provide the translations in the same numbered order:\n" + numbered
+                f"Translate the following segments labelled [[SEG1]]..[[SEG{len(batch)}]]. "
+                "Provide the translations on separate lines using the same labels:\n" + marked
             )
             translator.messages.append({"role": "user", "content": prompt})
             try:
@@ -181,7 +181,7 @@ def batch_translate(
                 print(f"❌ Chyba při překladu: {e}")
                 reply = "\n".join(batch)
 
-            translations = _parse_numbered(reply)
+            translations = _parse_segments(reply)
             for original, translated in zip(batch, translations):
                 translator.cache[original] = translated
                 done += counts.get(original, 1)
@@ -226,10 +226,10 @@ async def async_batch_translate(
 
     async def translate_batch(lang: str, translator: ChatTranslator, batch: list[str]) -> None:
         nonlocal done
-        numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
+        marked = "\n".join(f"[[SEG{i+1}]] {t}" for i, t in enumerate(batch))
         prompt = (
-            f"Translate the following pieces numbered 1..{len(batch)}. "
-            "Provide the translations in the same numbered order:\n" + numbered
+            f"Translate the following segments labelled [[SEG1]]..[[SEG{len(batch)}]]. "
+            "Provide the translations on separate lines using the same labels:\n" + marked
         )
         translator.messages.append({"role": "user", "content": prompt})
         try:
@@ -244,7 +244,7 @@ async def async_batch_translate(
             print(f"❌ Chyba při překladu: {e}")
             reply = "\n".join(batch)
 
-        translations = _parse_numbered(reply)
+        translations = _parse_segments(reply)
         for original, translated in zip(batch, translations):
             translator.cache[original] = translated
             done += counts.get(original, 1)
