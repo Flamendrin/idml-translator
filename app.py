@@ -286,6 +286,21 @@ def progress(job_id: str):
     return jsonify({'progress': info.get('progress', 0), 'links': info.get('links'), 'expires_at': info.get('expires_at')})
 
 
+@app.route('/translations')
+def translations():
+    completed_jobs = [
+        {
+            "id": jid,
+            "links": info.get("links", []),
+            "timestamp": info.get("timestamp", 0),
+        }
+        for jid, info in JOB_PROGRESS.items()
+        if info.get("progress") == 100
+    ]
+    completed_jobs.sort(key=lambda j: j["timestamp"], reverse=True)
+    return jsonify(completed_jobs)
+
+
 @app.route('/remove/<job_id>', methods=['POST'])
 def remove_job(job_id: str):
     info = JOB_PROGRESS.pop(job_id, None)
