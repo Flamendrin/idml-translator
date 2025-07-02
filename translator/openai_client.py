@@ -17,7 +17,8 @@ except Exception:  # pragma: no cover - optional dependency
 DEFAULT_PROMPT = (
     "You are a professional translator. "
     "Translate the following XML-safe text from {from_lang} to {to_lang}. "
-    "Do not change XML tags."
+    "Do not change XML tags. "
+    "Preserve all whitespace including spaces and line breaks."
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -72,7 +73,7 @@ class ChatTranslator:
                 messages=self.messages,
                 temperature=0.3,
             )
-            translation = response.choices[0].message.content.strip()
+            translation = response.choices[0].message.content.strip("\n")
             self.messages.append({"role": "assistant", "content": translation})
             if len(self.messages) > self.HISTORY_LIMIT + 1:
                 self.messages = [self.messages[0]] + self.messages[-self.HISTORY_LIMIT:]
@@ -115,7 +116,7 @@ def translate_text(
             messages=messages,
             temperature=0.3,
         )
-        return response.choices[0].message.content.strip()
+        return response.choices[0].message.content.strip("\n")
     except Exception as e:
         print(f"❌ Chyba při překladu: {e}")
         return text
@@ -148,7 +149,10 @@ def _parse_segments(translated: str) -> list[str]:
     i = 1
     while i < len(parts):
         _num = parts[i]
-        text = parts[i + 1].strip()
+        text = parts[i + 1]
+        if text.startswith(" "):
+            text = text[1:]
+        text = text.rstrip("\r\n")
         results.append(text)
         i += 2
     return results
@@ -196,7 +200,7 @@ def batch_translate(
                     messages=translator.messages,
                     temperature=0.3,
                 )
-                reply = response.choices[0].message.content.strip()
+                reply = response.choices[0].message.content.strip("\n")
                 translator.messages.append({"role": "assistant", "content": reply})
                 if len(translator.messages) > ChatTranslator.HISTORY_LIMIT + 1:
                     translator.messages = [translator.messages[0]] + translator.messages[-ChatTranslator.HISTORY_LIMIT:]
@@ -266,7 +270,7 @@ async def async_batch_translate(
                 messages=translator.messages,
                 temperature=0.3,
             )
-            reply = response.choices[0].message.content.strip()
+            reply = response.choices[0].message.content.strip("\n")
             translator.messages.append({"role": "assistant", "content": reply})
             if len(translator.messages) > ChatTranslator.HISTORY_LIMIT + 1:
                 translator.messages = [translator.messages[0]] + translator.messages[-ChatTranslator.HISTORY_LIMIT:]
