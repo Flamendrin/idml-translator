@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 import time
-from openai import OpenAI
+import asyncio
+from openai import OpenAI, AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 try:
@@ -19,6 +20,7 @@ DEFAULT_PROMPT = (
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 class ChatTranslator:
@@ -136,6 +138,7 @@ def batch_translate(
     progress_callback: callable | None = None,
     *,
     max_tokens: int = 800,
+    delay: float | None = 1.0,
 ) -> dict[str, list[str]]:
     """Translate ``texts`` into ``target_langs`` using OpenAI in batches."""
 
@@ -180,7 +183,78 @@ def batch_translate(
                 done += counts.get(original, 1)
                 if progress_callback:
                     progress_callback(int(done / total * 100))
-            time.sleep(1)
+            if delay:
+                time.sleep(delay)
+
+    for text in texts:
+        for lang, translator in translators.items():
+            results[lang].append(translator.cache.get(text, text))
+    return results
+
+
+async def async_batch_translate(
+    texts: list[str],
+    target_langs: list[str],
+    source_lang: str,
+    system_prompt: str | None = None,
+    progress_callback: callable | None = None,
+    *,
+    max_tokens: int = 800,
+    delay: float | None = None,
+) -> dict[str, list[str]]:
+    """Asynchronously translate ``texts`` into ``target_langs`` using OpenAI."""
+
+    results = {lang: [] for lang in target_langs}
+    translators = {
+        lang: ChatTranslator(source_lang, lang, system_prompt) for lang in target_langs
+    }
+
+    counts: dict[str, int] = {}
+    for t in texts:
+        counts[t] = counts.get(t, 0) + 1
+
+    total = max(1, len(texts) * len(target_langs))
+    done = 0
+
+    unique_texts = list(dict.fromkeys(texts))
+    tasks = []
+
+    async def translate_batch(lang: str, translator: ChatTranslator, batch: list[str]) -> None:
+        nonlocal done
+        numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
+        prompt = (
+            f"Translate the following pieces numbered 1..{len(batch)}. "
+            "Provide the translations in the same numbered order:\n" + numbered
+        )
+        translator.messages.append({"role": "user", "content": prompt})
+        try:
+            response = await async_client.chat.completions.create(
+                model="gpt-4",
+                messages=translator.messages,
+                temperature=0.3,
+            )
+            reply = response.choices[0].message.content.strip()
+            translator.messages.append({"role": "assistant", "content": reply})
+        except Exception as e:  # pragma: no cover - network errors
+            print(f"❌ Chyba při překladu: {e}")
+            reply = "\n".join(batch)
+
+        translations = _parse_numbered(reply)
+        for original, translated in zip(batch, translations):
+            translator.cache[original] = translated
+            done += counts.get(original, 1)
+            if progress_callback:
+                progress_callback(int(done / total * 100))
+        if delay:
+            await asyncio.sleep(delay)
+
+    for lang, translator in translators.items():
+        to_translate = [t for t in unique_texts if t not in translator.cache]
+        for batch in _split_batches(to_translate, max_tokens):
+            tasks.append(translate_batch(lang, translator, batch))
+
+    if tasks:
+        await asyncio.gather(*tasks)
 
     for text in texts:
         for lang, translator in translators.items():
