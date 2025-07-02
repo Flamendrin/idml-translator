@@ -150,10 +150,10 @@
         if (json.tokens !== null && json.tokens !== undefined && json.tokens > 0) {
           info.textContent = `Poslední překlad spotřeboval ${json.tokens} tokenů.`;
         } else {
-          info.textContent = 'Zbývající kredit není dostupný.';
+          info.textContent = '';
         }
       } catch (e) {
-        info.textContent = 'Zbývající kredit není dostupný.';
+        info.textContent = '';
       }
     }
   </script>
