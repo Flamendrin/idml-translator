@@ -75,7 +75,9 @@ class ChatTranslator:
             from_lang=from_lang,
             to_lang=to_lang,
         )
-        self.messages: list[ChatCompletionMessageParam] = [{"role": "system", "content": prompt}]
+        self.messages: list[ChatCompletionMessageParam] = [
+            {"role": "system", "content": prompt}
+        ]
         self.cache: dict[str, str] = {}
         self.model = model
 
@@ -95,7 +97,9 @@ class ChatTranslator:
             translation = response.choices[0].message.content.strip("\n")
             self.messages.append({"role": "assistant", "content": translation})
             if len(self.messages) > self.HISTORY_LIMIT + 1:
-                self.messages = [self.messages[0]] + self.messages[-self.HISTORY_LIMIT:]
+                self.messages = [
+                    self.messages[0]
+                ] + self.messages[-self.HISTORY_LIMIT:]
             self.cache[text] = translation
             return translation
         except Exception as e:  # pragma: no cover - network errors
@@ -195,7 +199,8 @@ def batch_translate(
 
     results = {lang: [] for lang in target_langs}
     translators = {
-        lang: ChatTranslator(source_lang, lang, system_prompt, model) for lang in target_langs
+        lang: ChatTranslator(source_lang, lang, system_prompt, model)
+        for lang in target_langs
     }
 
     counts: dict[str, int] = {}
@@ -210,7 +215,7 @@ def batch_translate(
     for lang, translator in translators.items():
         to_translate = [t for t in unique_texts if t not in translator.cache]
         for batch in _split_batches(to_translate, max_tokens, model):
-            marked = "\n".join(f"[[SEG{i+1}]] {t}" for i, t in enumerate(batch))
+            marked = "\n".join(f"[[SEG{i + 1}]] {t}" for i, t in enumerate(batch))
             prompt = (
                 f"Translate the following segments labelled [[SEG1]]..[[SEG{len(batch)}]]. "
                 "Provide the translations on separate lines using the same labels:\n" + marked
@@ -227,7 +232,9 @@ def batch_translate(
                 reply = response.choices[0].message.content.strip("\n")
                 translator.messages.append({"role": "assistant", "content": reply})
                 if len(translator.messages) > ChatTranslator.HISTORY_LIMIT + 1:
-                    translator.messages = [translator.messages[0]] + translator.messages[-ChatTranslator.HISTORY_LIMIT:]
+                    translator.messages = [
+                        translator.messages[0]
+                    ] + translator.messages[-ChatTranslator.HISTORY_LIMIT:]
             except Exception as e:  # pragma: no cover - network errors
                 print(f"❌ Chyba při překladu: {e}")
                 reply = "\n".join(batch)
@@ -268,7 +275,8 @@ async def async_batch_translate(
 
     results = {lang: [] for lang in target_langs}
     translators = {
-        lang: ChatTranslator(source_lang, lang, system_prompt, model) for lang in target_langs
+        lang: ChatTranslator(source_lang, lang, system_prompt, model)
+        for lang in target_langs
     }
 
     counts: dict[str, int] = {}
@@ -281,9 +289,11 @@ async def async_batch_translate(
     unique_texts = list(dict.fromkeys(texts))
     tasks = []
 
-    async def translate_batch(lang: str, translator: ChatTranslator, batch: list[str]) -> None:
+    async def translate_batch(
+        lang: str, translator: ChatTranslator, batch: list[str]
+    ) -> None:
         nonlocal done
-        marked = "\n".join(f"[[SEG{i+1}]] {t}" for i, t in enumerate(batch))
+        marked = "\n".join(f"[[SEG{i + 1}]] {t}" for i, t in enumerate(batch))
         prompt = (
             f"Translate the following segments labelled [[SEG1]]..[[SEG{len(batch)}]]. "
             "Provide the translations on separate lines using the same labels:\n" + marked
@@ -300,7 +310,9 @@ async def async_batch_translate(
             reply = response.choices[0].message.content.strip("\n")
             translator.messages.append({"role": "assistant", "content": reply})
             if len(translator.messages) > ChatTranslator.HISTORY_LIMIT + 1:
-                translator.messages = [translator.messages[0]] + translator.messages[-ChatTranslator.HISTORY_LIMIT:]
+                translator.messages = [
+                    translator.messages[0]
+                ] + translator.messages[-ChatTranslator.HISTORY_LIMIT:]
         except Exception as e:  # pragma: no cover - network errors
             print(f"❌ Chyba při překladu: {e}")
             reply = "\n".join(batch)
