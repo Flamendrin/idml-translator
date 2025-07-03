@@ -27,6 +27,7 @@ from translator.text_extractor import (
 )
 from translator.openai_client import (
     batch_translate,
+    async_batch_translate,
     DEFAULT_PROMPT,
     get_remaining_credit,
 )
@@ -40,11 +41,14 @@ import shutil
 import time
 import threading
 import tempfile
+import asyncio
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devsecret")
 PASSWORD = os.environ.get("APP_PASSWORD", "banana")
 DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
+USE_ASYNC = os.environ.get("USE_ASYNC_TRANSLATE", "false").lower() in ("1", "true", "yes")
+MAX_BATCH_TOKENS = int(os.environ.get("MAX_BATCH_TOKENS", "800"))
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['RESULT_FOLDER'] = 'results'
 
@@ -183,15 +187,30 @@ def _run_translation_job(
         def _progress(pct: int) -> None:
             JOB_PROGRESS[job_id]["progress"] = int(pct * 0.9)
 
-        translations_by_lang = batch_translate(
-            all_texts,
-            selected_languages,
-            source_lang,
-            system_prompt,
-            progress_callback=_progress,
-            tokens_callback=_add_tokens,
-            model=model,
-        )
+        if USE_ASYNC:
+            translations_by_lang = asyncio.run(
+                async_batch_translate(
+                    all_texts,
+                    selected_languages,
+                    source_lang,
+                    system_prompt,
+                    progress_callback=_progress,
+                    tokens_callback=_add_tokens,
+                    max_tokens=MAX_BATCH_TOKENS,
+                    model=model,
+                )
+            )
+        else:
+            translations_by_lang = batch_translate(
+                all_texts,
+                selected_languages,
+                source_lang,
+                system_prompt,
+                progress_callback=_progress,
+                tokens_callback=_add_tokens,
+                max_tokens=MAX_BATCH_TOKENS,
+                model=model,
+            )
 
         for lang in selected_languages:
             lang_dir = os.path.join(app.config['UPLOAD_FOLDER'], f'unpacked_{lang}')

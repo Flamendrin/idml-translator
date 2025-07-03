@@ -25,6 +25,19 @@ estimate of the number of tokens that will be sent to the OpenAI API along with
 the approximate price based on the chosen model.  This uses the ``/estimate``
 endpoint and ``translator/token_estimator.py`` helper.
 
+## Async mode and large jobs
+
+Translations run in a background thread on the server. You can therefore lock
+your computer or close the browser tab and the process will keep running as long
+as the Flask application stays online.
+
+Setting the environment variable ``USE_ASYNC_TRANSLATE=1`` switches the
+background worker to the asynchronous ``async_batch_translate`` implementation
+which issues OpenAI requests concurrently.  For large documents you can also
+adjust ``MAX_BATCH_TOKENS`` (default ``800``) to control how many tokens are sent
+in each API call.  Higher values reduce the number of requests but must remain
+within the selected model's context limit.
+
 ## Tests
 
 Install test dependencies and run the suite with:

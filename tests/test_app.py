@@ -151,3 +151,40 @@ def test_tokens_route_returns_last_value(monkeypatch):
     assert resp.status_code == 200
 
     assert resp.get_json() == {'tokens': 123}
+
+
+def test_run_translation_job_async(monkeypatch, tmp_path):
+    called = {}
+
+    async def fake_async(texts, langs, src, prompt, progress_callback=None, tokens_callback=None, max_tokens=800, delay=None, model='gpt-4o'):
+        called['async'] = True
+        called['max'] = max_tokens
+        return {lang: ['x'] * len(texts) for lang in langs}
+
+    def fake_batch(*args, **kwargs):
+        called['batch'] = True
+        return {lang: ['x'] * len(args[0]) for lang in args[1]}
+
+    monkeypatch.setattr(app_module, 'extract_idml', lambda src, dst: None)
+    monkeypatch.setattr(app_module, 'find_story_files', lambda d: [tmp_path / 's.xml'])
+    monkeypatch.setattr(app_module, 'load_story_xml', lambda p: None)
+    monkeypatch.setattr(app_module, 'extract_content_elements', lambda tree: [(None, 't', [])])
+    monkeypatch.setattr(app_module, 'update_content_elements', lambda c, t: None)
+    monkeypatch.setattr(app_module, 'save_story_xml', lambda tree, p: None)
+    monkeypatch.setattr(app_module, 'copy_unpacked_dir', lambda s, d: None)
+    monkeypatch.setattr(app_module, 'repackage_idml', lambda s, d: None)
+    monkeypatch.setattr(app_module, 'async_batch_translate', fake_async)
+    monkeypatch.setattr(app_module, 'batch_translate', fake_batch)
+
+    monkeypatch.setenv('USE_ASYNC_TRANSLATE', '1')
+    monkeypatch.setenv('MAX_BATCH_TOKENS', '50')
+    app_module.USE_ASYNC = True
+    app_module.MAX_BATCH_TOKENS = 50
+
+    job_id = 'j'
+    JOB_PROGRESS[job_id] = {'timestamp': time.time(), 'progress': 0}
+    app_module._run_translation_job(job_id, [(str(tmp_path / 'f.idml'), 'f')], ['cs'], 'en', None, 'gpt-3.5-turbo')
+
+    assert called.get('async') is True
+    assert called.get('max') == 50
+    assert 'batch' not in called
