@@ -1,9 +1,8 @@
-import pytest
 from lxml import etree
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from translator.text_extractor import extract_content_elements, update_content_elements
+from translator.text_extractor import extract_content_elements, update_content_elements  # noqa: E402
 
 
 def test_extract_content_elements_ignores_empty():

@@ -1,5 +1,4 @@
 import tiktoken
-import pytest
 from translator.token_estimator import (
     count_tokens,
     estimate_cost,
@@ -63,4 +62,3 @@ def test_estimate_total_tokens_adds_overhead(monkeypatch):
     ]
     assert captured[3] == ['[[SEG1]]', '[[SEG2]]']
     assert tokens > sum(len(c) for c in captured)
-

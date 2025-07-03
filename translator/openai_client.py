@@ -102,6 +102,7 @@ class ChatTranslator:
             print(f"❌ Chyba při překladu: {e}")
             return text
 
+
 LANGUAGE_MAP: dict[str, str] = {}
 if pycountry:
     LANGUAGE_MAP.update(
@@ -111,6 +112,7 @@ if pycountry:
             if hasattr(lang, "alpha_2")
         }
     )
+
 
 def translate_text(
     text: str,
@@ -140,6 +142,7 @@ def translate_text(
         print(f"❌ Chyba při překladu: {e}")
         return text
 
+
 def _split_batches(texts: list[str], max_tokens: int, model: str) -> list[list[str]]:
     """Split ``texts`` so each batch stays within the ``max_tokens`` limit."""
     batches: list[list[str]] = []
@@ -167,7 +170,6 @@ def _parse_segments(translated: str) -> list[str]:
     results: list[str] = []
     i = 1
     while i < len(parts):
-        _num = parts[i]
         text = parts[i + 1]
         if text.startswith(" "):
             text = text[1:]
@@ -324,4 +326,3 @@ async def async_batch_translate(
         for lang, translator in translators.items():
             results[lang].append(translator.cache.get(text, text))
     return results
-

@@ -53,4 +53,3 @@ def test_copy_unpacked_dir_overwrites(tmp_path):
     (dest / "a.txt").write_text("old")
     copy_unpacked_dir(src, dest)
     assert (dest / "a.txt").read_text() == "ok"
-
