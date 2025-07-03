@@ -65,7 +65,7 @@ def estimate_total_tokens(
         ],
         model,
     )
-    markers = [f"[[SEG{i+1}]]" for i in range(len(unique))]
+    markers = [f"[[SEG{i + 1}]]" for i in range(len(unique))]
     tokens += count_tokens(markers, model)
 
     # Rough protocol overhead for a single chat completion
