@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from lxml import etree
+import html
 import re
 
 TAG_PATTERN = re.compile(r"<[^>]+>")
@@ -21,7 +22,7 @@ def _tags_to_placeholders(text: str) -> tuple[str, list[str]]:
 
 def _placeholders_to_tags(text: str, tags: list[str]) -> str:
     """Reinsert ``tags`` into ``text`` replacing placeholders."""
-
+    text = html.escape(text, quote=False)
     for i, tag in enumerate(tags, 1):
         text = text.replace(f"[[TAG{i}]]", tag)
     return text
