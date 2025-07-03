@@ -40,10 +40,12 @@ within the selected model's context limit.
 
 ## Tests and style
 
-Install test dependencies and run style checks with:
+Install test dependencies (including `flake8` and `pytest`) and run style
+checks with:
 ```bash
 pip install -r requirements.txt
 flake8
 pytest
 ```
-The included GitHub Actions workflow also runs these commands on every push.
+The included GitHub Actions workflow installs from `requirements.txt` and runs
+these same commands on every push.
