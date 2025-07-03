@@ -77,4 +77,3 @@ def estimate_total_tokens(
 
     total = (tokens + response_tokens + overhead) * max(1, languages)
     return total
-

@@ -1,17 +1,17 @@
-import io
-import os
 import sys
+import os
+import io
 import zipfile
 import threading
+import time
 
-from translator import token_estimator
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from translator import token_estimator  # noqa: E402
 os.environ.setdefault("OPENAI_API_KEY", "test")
-import app as app_module
-from app import app, JOB_PROGRESS, _cleanup_old_jobs, MAX_FILE_AGE
+import app as app_module  # noqa: E402
+from app import app, JOB_PROGRESS, _cleanup_old_jobs, MAX_FILE_AGE  # noqa: E402
 app.config['TESTING'] = True
-import time
 
 
 def test_index_non_idml_file_shows_error_message():
@@ -81,6 +81,7 @@ def test_index_passes_selected_model(monkeypatch, tmp_path):
         def __init__(self, target, args=(), daemon=None):
             self.target = target
             self.args = args
+
         def start(self):
             self.target(*self.args)
 

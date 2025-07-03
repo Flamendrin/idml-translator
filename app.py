@@ -32,9 +32,7 @@ from translator.openai_client import (
     get_remaining_credit,
 )
 from translator.token_estimator import (
-    count_tokens,
     estimate_cost,
-    MODEL_RATES,
     estimate_total_tokens,
 )
 import shutil
@@ -120,6 +118,7 @@ def _require_login():
     if session.get("logged_in"):
         return
     return redirect(url_for("login"))
+
 
 try:
     import pycountry  # type: ignore
@@ -224,7 +223,7 @@ def _run_translation_job(
                 tree = load_story_xml(new_story_path)
                 local_contents = extract_content_elements(tree)
 
-                translations = translations_by_lang[lang][index : index + len(local_contents)]
+                translations = translations_by_lang[lang][index:index + len(local_contents)]
                 update_content_elements(local_contents, translations)
                 save_story_xml(tree, new_story_path)
 
@@ -254,6 +253,7 @@ def login():
             return redirect(url_for('index'))
         error = 'Nesprávné heslo.'
     return render_template('login.html', error=error)
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -327,6 +327,7 @@ def index():
         lang_names=LANGUAGE_NAMES,
         selected_model=DEFAULT_MODEL,
     )
+
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -416,6 +417,7 @@ def remove_job(job_id: str):
             with contextlib.suppress(FileNotFoundError):
                 os.remove(path)
     return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

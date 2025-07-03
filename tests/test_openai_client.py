@@ -3,7 +3,7 @@ import os
 import asyncio
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from translator import openai_client
+from translator import openai_client  # noqa: E402
 
 
 def test_batch_translate_batches_and_caches(monkeypatch):
@@ -13,8 +13,8 @@ def test_batch_translate_batches_and_caches(monkeypatch):
 
     def fake_create(*args, **kwargs):
         prompt = kwargs['messages'][-1]['content']
-        lines = [l for l in prompt.splitlines() if l.strip().startswith('[[SEG')]
-        pieces = [l.split(']]', 1)[1].strip() for l in lines]
+        lines = [line for line in prompt.splitlines() if line.strip().startswith('[[SEG')]
+        pieces = [line.split(']]', 1)[1].strip() for line in lines]
 
         class M:
             pass
@@ -48,8 +48,8 @@ def test_async_batch_translate(monkeypatch):
 
     async def fake_create(*args, **kwargs):
         prompt = kwargs['messages'][-1]['content']
-        lines = [l for l in prompt.splitlines() if l.strip().startswith('[[SEG')]
-        pieces = [l.split(']]', 1)[1].strip() for l in lines]
+        lines = [line for line in prompt.splitlines() if line.strip().startswith('[[SEG')]
+        pieces = [line.split(']]', 1)[1].strip() for line in lines]
 
         class M:
             pass

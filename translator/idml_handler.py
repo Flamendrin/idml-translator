@@ -7,6 +7,7 @@ import shutil
 import zipfile
 from pathlib import Path
 
+
 class ExtractionError(Exception):
     """Raised when an invalid archive tries to escape extraction directory."""
 
@@ -30,11 +31,13 @@ def extract_idml(idml_path: str, output_dir: str) -> None:
     with zipfile.ZipFile(idml_path, "r") as zip_ref:
         _safe_extract(zip_ref, output_dir)
 
+
 def find_story_files(unpacked_dir: str | Path) -> list[Path]:
     """Return the list of ``.xml`` story files contained in ``unpacked_dir``."""
 
     stories_path = Path(unpacked_dir) / "Stories"
     return list(stories_path.glob("*.xml"))
+
 
 def repackage_idml(source_dir: str | Path, output_idml_path: str | Path) -> None:
     """Create a new IDML archive from ``source_dir``."""
@@ -45,6 +48,7 @@ def repackage_idml(source_dir: str | Path, output_idml_path: str | Path) -> None
                 filepath = os.path.join(foldername, filename)
                 relpath = os.path.relpath(filepath, source_dir)
                 zipf.write(filepath, arcname=relpath)
+
 
 def copy_unpacked_dir(source_dir: str | Path, target_dir: str | Path) -> None:
     """Copy an unpacked IDML directory to ``target_dir``."""
