@@ -38,10 +38,12 @@ adjust ``MAX_BATCH_TOKENS`` (default ``800``) to control how many tokens are sen
 in each API call.  Higher values reduce the number of requests but must remain
 within the selected model's context limit.
 
-## Tests
+## Tests and style
 
-Install test dependencies and run the suite with:
+Install test dependencies and run style checks with:
 ```bash
 pip install -r requirements.txt
+flake8
 pytest
 ```
+The included GitHub Actions workflow also runs these commands on every push.
