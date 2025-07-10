@@ -189,3 +189,34 @@ def test_run_translation_job_async(monkeypatch, tmp_path):
     assert called.get('async') is True
     assert called.get('max') == 50
     assert 'batch' not in called
+
+
+def test_export_project_returns_zip(tmp_path):
+    job_id = 'job1'
+    app.config['RESULT_FOLDER'] = str(tmp_path)
+    f1 = tmp_path / 'doc-cs.idml'
+    f1.write_text('cs')
+    f2 = tmp_path / 'doc-de.idml'
+    f2.write_text('de')
+    JOB_PROGRESS.clear()
+    JOB_PROGRESS[job_id] = {
+        'progress': 100,
+        'timestamp': time.time(),
+        'links': [
+            ('cs', f'/download/{f1.name}', f1.name),
+            ('de', f'/download/{f2.name}', f2.name),
+        ],
+    }
+
+    client = app.test_client()
+    resp = client.get(f'/project/{job_id}/export')
+    assert resp.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(resp.data)) as zf:
+        assert sorted(zf.namelist()) == [f1.name, f2.name]
+
+
+def test_export_unknown_job_returns_404():
+    JOB_PROGRESS.clear()
+    client = app.test_client()
+    resp = client.get('/project/missing/export')
+    assert resp.status_code == 404

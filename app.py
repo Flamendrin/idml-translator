@@ -7,6 +7,7 @@ from flask import (
     url_for,
     session,
     jsonify,
+    after_this_request,
 )
 import os
 from werkzeug.utils import secure_filename
@@ -40,6 +41,7 @@ import time
 import threading
 import tempfile
 import asyncio
+import zipfile
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devsecret")
@@ -332,6 +334,30 @@ def index():
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_from_directory(app.config['RESULT_FOLDER'], filename, as_attachment=True)
+
+
+@app.route('/project/<job_id>/export')
+def export_project(job_id: str):
+    """Package translated files for a job into a ZIP archive."""
+    info = JOB_PROGRESS.get(job_id)
+    if not info or info.get("progress") != 100 or not info.get("links"):
+        return "Not found", 404
+
+    fd, zip_path = tempfile.mkstemp(suffix='.zip', dir=app.config['RESULT_FOLDER'])
+    os.close(fd)
+    with zipfile.ZipFile(zip_path, 'w') as zf:
+        for _, _, fname in info["links"]:
+            file_path = os.path.join(app.config['RESULT_FOLDER'], fname)
+            if os.path.exists(file_path):
+                zf.write(file_path, arcname=fname)
+
+    @after_this_request
+    def _cleanup(response):
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(zip_path)
+        return response
+
+    return send_from_directory(app.config['RESULT_FOLDER'], os.path.basename(zip_path), as_attachment=True)
 
 
 @app.route('/estimate', methods=['POST'])
