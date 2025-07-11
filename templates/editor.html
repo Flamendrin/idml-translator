@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>Editor</h1>
+  <textarea id="edit-box" rows="4"></textarea>
+
+  <script>
+    function autoResize() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    }
+    const box = document.getElementById('edit-box');
+    if (box) {
+      box.addEventListener('input', autoResize);
+      window.addEventListener('DOMContentLoaded', function () {
+        autoResize.call(box);
+      });
+    }
+  </script>
+</body>
+</html>
